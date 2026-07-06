@@ -66,6 +66,24 @@ def _force_breach() -> bool:
     return settings.TEST_FORCE_BREACH
 
 
+_DRILL_EVIDENCE_SQL = """
+SELECT id, carrier, stops, price
+FROM price_snapshot
+WHERE route_id = %(rid)s AND NOT is_calendar AND depart_date = %(d)s
+  AND currency = %(cur)s AND captured_at > now() - interval '36 hours'
+ORDER BY price ASC
+"""
+
+
+def drill_evidence(route_id: str, d, currency: str):
+    """某 (route, 出发日) 的钻取详情快照：返回 (ids, cheapest_carrier, cheapest_stops)。"""
+    rows = query(_DRILL_EVIDENCE_SQL, {"rid": route_id, "d": d, "cur": currency})
+    ids = [r["id"] for r in rows]
+    carrier = rows[0]["carrier"] if rows else None
+    stops = rows[0]["stops"] if rows else None
+    return ids, carrier, stops
+
+
 # ------------------------------------------------------------- 注册表 -------
 
 _RULE_MODULES = [

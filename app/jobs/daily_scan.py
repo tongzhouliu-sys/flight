@@ -63,7 +63,7 @@ def main() -> None:
     log.info("baseline: %d (route, month, bucket) 格重算", n_base)
 
     # 4) 信号 → 风险 → 告警（§9）
-    drafts = run_rules(cfg, ["baseline_breach"])
+    drafts = run_rules(cfg, ["baseline_breach", "date_shift", "nearby_airport"])
     tally = dispatch_alerts(cfg, drafts)
     log.info("signals: %d drafts, dispatch=%s", len(drafts), tally)
 

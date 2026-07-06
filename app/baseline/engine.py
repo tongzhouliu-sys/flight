@@ -115,6 +115,15 @@ def recompute_self_baselines(cfg) -> int:
     return len(rows)
 
 
+def upsert_coldstart(route_id: str, travel_month: str, bucket: str, derived: dict) -> None:
+    """写入冷启动基线行（source='coldstart', sample_n=0, low_confidence=True）。"""
+    execute(UPSERT_BASELINE, {
+        "rid": route_id, "tm": travel_month, "lb": bucket,
+        "p10": derived["p10"], "p15": derived["p15"], "p25": derived["p25"], "p50": derived["p50"],
+        "n": 0, "lc": True, "src": "coldstart",
+    })
+
+
 def _row_to_baseline(r: dict) -> Baseline:
     return Baseline(
         route_id=r["route_id"], travel_month=r["travel_month"], lead_bucket=r["lead_bucket"],
