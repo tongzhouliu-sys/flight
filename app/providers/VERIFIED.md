@@ -38,7 +38,7 @@ from fli.search import SearchFlights, SearchDates, DatePrice
 ### 日期区间搜索：`SearchDates().search(filters, currency=None, language=None, country=None)`
 - `DateSearchFilters(*, trip_type, passenger_info, flight_segments, seat_type, stops, from_date: str, to_date: str, duration: int|None)`。
 - `from_date`/`to_date` 为 `"YYYY-MM-DD"` 字符串；单次 ≤ 61 天，>61 天库内部自动分块（本项目 horizon=60，单块）。
-- **one_way**：1 个 `FlightSegment`（`travel_date` 用 `from_date` 占位）+ `trip_type=ONE_WAY`。
+- **one_way**：1 个 `FlightSegment`（`travel_date` 设为 `from_date` 作起始日）+ `trip_type=ONE_WAY`。
 - **round_trip**：`trip_type=ROUND_TRIP` + `duration=stay_rep`，且需 **2 个 segment**，两段 `travel_date` 之差必须等于 `duration`（validator 强校验）→ seg0.travel_date=from_date、seg1.travel_date=from_date+duration。
 - 返回 `list[DatePrice]`；`DatePrice.date` 是 **datetime 元组**：one_way → `(depart,)`，round_trip → `(depart, return)`；`DatePrice.price: float`、`DatePrice.currency: str|None`。
 

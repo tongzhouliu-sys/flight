@@ -88,3 +88,11 @@ def now_sgt() -> datetime:
 
 def today_sgt() -> date:
     return now_sgt().date()
+
+
+_CURRENCY_SYMBOL = {"SGD": "S$", "USD": "$", "CNY": "¥", "HKD": "HK$", "EUR": "€"}
+
+
+def currency_symbol(currency: str) -> str:
+    """币种代码 → 展示符号（无映射时回退代码本身）。"""
+    return _CURRENCY_SYMBOL.get(currency, currency + " ")

@@ -6,7 +6,8 @@
 import urllib.parse
 from datetime import date, datetime
 
-_CURRENCY_SYMBOL = {"SGD": "S$", "USD": "$", "CNY": "¥", "HKD": "HK$", "EUR": "€"}
+from app.settings import currency_symbol as sym
+
 _WEEKDAY_CN = ["周一", "周二", "周三", "周四", "周五", "周六", "周日"]
 _TYPE_TITLE = {
     "baseline_breach": "低价信号",
@@ -22,10 +23,6 @@ _RULE_NAME = {
 }
 
 
-def sym(currency: str) -> str:
-    return _CURRENCY_SYMBOL.get(currency, currency + " ")
-
-
 def build_ops_card(text: str) -> dict:
     """模板 B · 运维卡：header red，正文一段 lark_md。"""
     ts = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -38,6 +35,24 @@ def build_ops_card(text: str) -> dict:
         "elements": [
             {"tag": "div", "text": {"tag": "lark_md", "content": text}},
             {"tag": "note", "elements": [{"tag": "plain_text", "content": ts}]},
+        ],
+    }
+
+
+def build_weekly_card(levels_md: str, queued_md: str, health_md: str) -> dict:
+    """模板 C · 周报卡：header purple；三段（航线水位 / 被限流机会 / 系统健康）。"""
+    return {
+        "config": {"wide_screen_mode": True},
+        "header": {
+            "template": "purple",
+            "title": {"tag": "plain_text", "content": "📊 FareRadar 周报"},
+        },
+        "elements": [
+            {"tag": "div", "text": {"tag": "lark_md", "content": "**各航线价格水位**\n" + levels_md}},
+            {"tag": "hr"},
+            {"tag": "div", "text": {"tag": "lark_md", "content": "**本周被限流的次级机会**\n" + queued_md}},
+            {"tag": "hr"},
+            {"tag": "div", "text": {"tag": "lark_md", "content": "**系统健康**\n" + health_md}},
         ],
     }
 

@@ -1,0 +1,40 @@
+name: weekly-jobs
+on:
+  schedule:
+    - cron: "0 1 * * 1"     # 周一 09:00 SGT: self_transfer + insights
+    - cron: "0 12 * * 0"    # 周日 20:00 SGT: weekly report
+  workflow_dispatch:
+    inputs:
+      job:
+        description: "monday | sunday"
+        default: "sunday"
+jobs:
+  monday:
+    if: github.event.schedule == '0 1 * * 1' || github.event.inputs.job == 'monday'
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python -m app.jobs.weekly_selftransfer && python -m app.jobs.weekly_insights
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          SERPAPI_KEY: ${{ secrets.SERPAPI_KEY }}
+          TZ: Asia/Singapore
+  sunday:
+    if: github.event.schedule == '0 12 * * 0' || github.event.inputs.job == 'sunday'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.12", cache: pip }
+      - run: pip install -r requirements.txt
+      - run: python -m app.jobs.weekly_report
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          FEISHU_WEBHOOK_URL: ${{ secrets.FEISHU_WEBHOOK_URL }}
+          TZ: Asia/Singapore
