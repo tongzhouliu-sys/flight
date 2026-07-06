@@ -5,8 +5,10 @@
 - 配置以 SimpleNamespace 暴露点式访问：cfg.scan.horizon_days、cfg.rules.date_shift.min_pct 等。
 """
 import os
+from datetime import date, datetime
 from pathlib import Path
 from types import SimpleNamespace
+from zoneinfo import ZoneInfo
 
 import yaml
 
@@ -74,3 +76,15 @@ def load_baggage() -> dict:
 def load_routes_yaml() -> list[dict]:
     """config/routes.yaml → routes 列表（bootstrap 用；运行期改从 route 表读）。"""
     return _load_yaml("routes.yaml")["routes"]
+
+
+_TZ = ZoneInfo(_load_yaml("config.yaml")["timezone"])
+
+
+def now_sgt() -> datetime:
+    """配置时区（默认 Asia/Singapore）的当前时间。"""
+    return datetime.now(_TZ)
+
+
+def today_sgt() -> date:
+    return now_sgt().date()

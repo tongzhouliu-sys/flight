@@ -65,6 +65,7 @@ class ProviderChain:
         self._degraded: set[str] = set()
         self._fail: dict[str, int] = defaultdict(int)
         self.ops = defaultdict(lambda: {"requests": 0, "ok": 0, "degraded": 0, "failed": 0})
+        self.last_provider: str | None = None   # 最近一次成功服务的源（入库 provider 字段用）
 
     # ---------------------------------------------------------- provider ----
     def _construct(self, name: str):
@@ -115,6 +116,7 @@ class ProviderChain:
             result = getattr(prov, method)(*args)
             self.ops[name]["ok"] += 1
             self._fail[name] = 0
+            self.last_provider = name
             return result, True
         except ProviderError as e:
             self.ops[name]["failed"] += 1

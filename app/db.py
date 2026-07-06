@@ -47,6 +47,14 @@ def execute_returning(sql: str, params: dict | tuple | None = None) -> dict | No
         return cur.fetchone()
 
 
+def executemany(sql: str, seq_params: list[dict] | list[tuple]) -> None:
+    rows = list(seq_params)
+    if not rows:
+        return
+    with pool().connection() as conn, conn.cursor() as cur:
+        cur.executemany(sql, rows)
+
+
 # ---------------------------------------------------------------- 路由 -------
 
 @dataclass(frozen=True)
