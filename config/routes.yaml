@@ -1,0 +1,15 @@
+routes:
+  - { id: R1, origin: SIN, dest: WUH, trip_type: one_way,   tier: P0, enabled: true }
+  - { id: R2, origin: WUH, dest: SIN, trip_type: one_way,   tier: P0, enabled: true }
+  - { id: R3, origin: SIN, dest: HKG, trip_type: one_way,   tier: P0, enabled: true,
+      nearby_airports: [SZX, CAN] }
+  - { id: R4, origin: HKG, dest: SIN, trip_type: one_way,   tier: P0, enabled: true,
+      nearby_airports: [SZX, CAN] }
+  - { id: R5, origin: SIN, dest: LAX, trip_type: round_trip, tier: P1, enabled: true,
+      stay_min: 7, stay_max: 14, stay_rep: 10 }
+  - { id: R6, origin: WUH, dest: HKG, trip_type: one_way,   tier: P1, enabled: true,
+      nearby_airports: [SZX, CAN] }
+  - { id: R7, origin: HKG, dest: WUH, trip_type: one_way,   tier: P1, enabled: true,
+      nearby_airports: [SZX, CAN] }
+  - { id: R8, origin: WUH, dest: LAX, trip_type: round_trip, tier: P2, enabled: true,
+      stay_min: 7, stay_max: 14, stay_rep: 10 }

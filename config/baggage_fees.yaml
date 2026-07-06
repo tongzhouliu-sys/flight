@@ -1,0 +1,10 @@
+lcc_carriers: [TR, AK, D7, FD, VJ, VZ, 5J, TT, IX, SL, OD, QZ, JT, GK, MM, TW, LJ, 7C, ZE, BX, HO, 9C]
+fees_sgd:
+  TR: 48        # Scoot
+  AK: 45        # AirAsia
+  D7: 60        # AirAsia X
+  VJ: 40        # VietJet
+  5J: 45        # Cebu Pacific
+  9C: 50        # 春秋
+  HO: 45        # 吉祥（LCC 化运价时）
+  DEFAULT_LCC: 50

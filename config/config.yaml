@@ -1,0 +1,44 @@
+currency: SGD
+timezone: Asia/Singapore
+cabin: ECONOMY            # 对应 fli SeatType
+pax: 1
+
+scan:
+  horizon_days: 60        # 日历扫覆盖天数
+  drill_top_n: 3          # 每航线每次运行最多钻取的候选日期数
+  drill_trigger: p25      # 日历价低于该分位才钻取
+
+baseline:
+  window_days: 400        # 统计窗口
+  min_sample: 30          # 自建基线可信样本数
+  lead_buckets:           # 出发日 - 采价日
+    L0: [0, 13]
+    L1: [14, 56]
+    L2: [57, 9999]
+
+alerts:
+  threshold_percentile: p15     # 自建基线触发阈值
+  coldstart_factor: 0.95        # 冷启动：p25(=range_low) * factor
+  weekly_cap: 5
+  dedup_ttl_hours: 72
+  price_bucket_sgd: 10          # dedup_key 价格取整粒度
+
+rules:
+  date_shift:   { min_pct: 0.15, min_abs: 50 }
+  nearby:       { min_pct: 0.12, min_abs: 60, adder_sgd: 40 }
+  self_transfer:
+    min_pct: 0.12
+    min_abs: 150
+    hubs: [TPE, NRT, ICN, HKG]
+    min_connect_min: 240
+    insurance_sgd: 50
+    candidate_dates: 3          # 每航线每周取最便宜的 N 个日期尝试
+    max_queries: 60             # 该任务单次运行的详情查询上限
+
+providers:
+  daily_budget: { fli: 100, fast_flights: 100, serpapi: 10 }
+  serpapi_monthly_cap: 200
+  fail_threshold: 3             # 连续失败 N 次切下一级
+
+feishu:
+  weekly_report_hour_sgt: 20
