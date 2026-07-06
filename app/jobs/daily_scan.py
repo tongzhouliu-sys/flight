@@ -14,6 +14,8 @@ from app.ingestion.scanner import (breach_candidates, insert_calendar_snapshots,
 from app.notify.feishu import notify_ops
 from app.providers.chain import AllProvidersFailed, ProviderChain
 from app.settings import load_config, today_sgt
+from app.signals.alerts import dispatch_alerts
+from app.signals.engine import run_rules
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s %(message)s")
 log = logging.getLogger("fareradar.daily_scan")
@@ -59,6 +61,11 @@ def main() -> None:
     # 2) 基线重算（§8）
     n_base = recompute_self_baselines(cfg)
     log.info("baseline: %d (route, month, bucket) 格重算", n_base)
+
+    # 4) 信号 → 风险 → 告警（§9）
+    drafts = run_rules(cfg, ["baseline_breach"])
+    tally = dispatch_alerts(cfg, drafts)
+    log.info("signals: %d drafts, dispatch=%s", len(drafts), tally)
 
     # 5) 收尾
     chain.flush_ops_log()

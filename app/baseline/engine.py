@@ -9,7 +9,7 @@
 from dataclasses import dataclass
 from datetime import date
 
-from app.db import execute, query
+from app.db import execute, query, query_one
 
 # §5.2 自建基线重算：桶边界(l0hi/l1hi)、窗口(window)、币种(cur) 全部来自 config
 RECOMPUTE_SQL = """
@@ -145,3 +145,32 @@ def load_baseline_rows(route_id: str, travel_month: str, bucket: str):
 def resolve_baseline_db(route_id: str, travel_month: str, bucket: str, min_sample: int) -> Baseline | None:
     self_row, cold_row = load_baseline_rows(route_id, travel_month, bucket)
     return resolve_baseline(self_row, cold_row, min_sample)
+
+
+GRID_STATS_SQL = """
+WITH pop AS (
+  SELECT price FROM price_snapshot
+  WHERE route_id = %(rid)s AND is_calendar AND variant IS NULL AND currency = %(cur)s
+    AND captured_at > now() - make_interval(days => %(window)s)
+    AND to_char(depart_date, 'YYYY-MM') = %(month)s
+    AND (CASE WHEN depart_date - captured_at::date <= %(l0hi)s THEN 'L0'
+              WHEN depart_date - captured_at::date <= %(l1hi)s THEN 'L1'
+              ELSE 'L2' END) = %(bucket)s
+)
+SELECT round(100.0 * count(*) FILTER (WHERE price <= %(price)s) / NULLIF(count(*), 0)) AS pct,
+       min(price) AS wlow
+FROM pop
+"""
+
+
+def grid_stats(cfg, route_id: str, month: str, bucket: str, price: float) -> dict:
+    """当前价在该 (route, month, bucket) 历史样本中的分位 + 窗口最低价（供信号卡）。"""
+    lb = vars(cfg.baseline.lead_buckets)
+    r = query_one(GRID_STATS_SQL, {
+        "rid": route_id, "cur": cfg.currency, "window": cfg.baseline.window_days,
+        "month": month, "bucket": bucket, "l0hi": lb["L0"][1], "l1hi": lb["L1"][1],
+        "price": price,
+    })
+    pct = int(r["pct"]) if r and r["pct"] is not None else None
+    wlow = float(r["wlow"]) if r and r["wlow"] is not None else None
+    return {"pct": pct, "wlow": wlow}
