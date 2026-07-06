@@ -7,6 +7,7 @@ T4 在采集后接入基线重算；T5 接入信号→风险→告警。
 import logging
 from datetime import timedelta
 
+from app.baseline.engine import recompute_self_baselines
 from app.db import load_enabled_routes
 from app.ingestion.scanner import (breach_candidates, insert_calendar_snapshots,
                                     insert_detail_snapshots, substitute_hkg)
@@ -52,7 +53,12 @@ def main() -> None:
     routes = load_enabled_routes()
     chain = ProviderChain(cfg)
 
+    # 1) 日历扫 + 3) 钻取
     collect(cfg, chain, routes)
+
+    # 2) 基线重算（§8）
+    n_base = recompute_self_baselines(cfg)
+    log.info("baseline: %d (route, month, bucket) 格重算", n_base)
 
     # 5) 收尾
     chain.flush_ops_log()
