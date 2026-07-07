@@ -1,0 +1,20 @@
+# Railway 前端服务（Next.js）——与后端 FastAPI 是同一仓库的两个独立 service。
+#
+# 一次性设置（在 Railway Dashboard 新建 service 时）：
+#   1. New Service → 选本仓库（GitHub: flight）。
+#   2. Settings → Root Directory 设为 `web`，Railway 即读取本文件。
+#   3. Settings → Variables 添加 FARERADAR_API_BASE = 后端服务地址
+#      （如 https://<backend>.up.railway.app；前端 /api/* 代理会转发到它）。
+#
+# 之后每次 push 到部署分支 → 自动 build（next build）并重启，实现「push 即上线」。
+# Node 版本由 web/.nvmrc（22）锁定；启动端口由 Railway 注入的 $PORT 自动生效。
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npm run start"
+healthcheckPath = "/healthz"
+healthcheckTimeout = 100
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3

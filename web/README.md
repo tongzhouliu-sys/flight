@@ -49,7 +49,25 @@ npm run build
 npm run start        # 默认 :3000；生产环境设置 FARERADAR_API_BASE 指向线上后端
 ```
 
-前端可作为独立 Node 服务部署（如 Railway 新增服务），与 Python 服务并存。
+## 部署到 Railway（push 即上线）
+
+前端作为**独立 service** 部署，与后端 FastAPI service 共用同一 GitHub 仓库、互不影响。
+配置已内置于 `web/railway.toml` + `web/.nvmrc`（Node 22）+ `/healthz` 健康检查。
+
+一次性设置（Railway Dashboard，仅首次）：
+
+1. **New Service → Deploy from GitHub repo**，选择本仓库。
+2. **Settings → Root Directory** 设为 `web`（Railway 即读取 `web/railway.toml`，
+   只构建前端，不会碰后端）。
+3. **Settings → Variables** 添加 `FARERADAR_API_BASE`，值为后端服务的地址，
+   例如 `https://<backend>.up.railway.app`（前端 `/api/*` 代理会转发到它）。
+4. 确认部署分支（Settings → Source，一般为 `main`）。
+
+完成后：每次 `git push` 到该分支 → Railway 自动 `next build` 并重启 →「push 即上线」。
+后端 service 保持独立，UI 改动**不需要**也不会由后端部署反映出来。
+
+> 构建/启动均由 `web/railway.toml` 固化：`builder=NIXPACKS`、`startCommand=npm run start`
+> （端口取 Railway 注入的 `$PORT`）、`healthcheckPath=/healthz`。
 
 ## 页面
 
