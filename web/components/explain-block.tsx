@@ -1,6 +1,7 @@
 import { ArrowRight } from "lucide-react";
 import { oppMeta } from "@/lib/constants";
 import { fmtPrice } from "@/lib/format";
+import { useCurrencyStore } from "@/lib/currency";
 import type { Opportunity } from "@/types";
 
 /**
@@ -8,6 +9,7 @@ import type { Opportunity } from "@/types";
  * 回答「有没有更便宜的方案」。
  */
 export function ExplainBlock({ op }: { op: Opportunity }) {
+  useCurrencyStore((s) => s.rate);
   const meta = oppMeta(op.type, op.type_label);
   const { from, to } = op.explain;
   return (

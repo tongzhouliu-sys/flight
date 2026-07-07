@@ -17,9 +17,10 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
 import { RISK_TAG_LABELS, RISK_TAG_TERMS, TYPE_TONE, oppMeta } from "@/lib/constants";
 import { fmtPrice, stopsLabel, weekday } from "@/lib/format";
-import { formatAirport } from "@/lib/airports";
+import { formatAirport, airportCity } from "@/lib/airports";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
+import { useCurrencyStore } from "@/lib/currency";
 
 interface OppDetail {
   percentile_now?: number | null;
@@ -45,8 +46,12 @@ export default function OpportunityDetailPage() {
   const response = useSearchStore((s) => s.response);
   const hydrate = useSearchStore((s) => s.hydrate);
 
+  // 订阅汇率
+  useCurrencyStore((s) => s.rate);
+
   useEffect(() => {
     hydrate();
+    useCurrencyStore.getState().fetchRate();
   }, [hydrate]);
 
   if (status === "loading" && !response) return <Loading />;
@@ -145,6 +150,24 @@ export default function OpportunityDetailPage() {
             <Field label="返回日" value={op.return_date ?? "单程"} />
             <Field label="航空公司" value={d.carrier ?? "—"} />
             <Field label="中转" value={d.stops == null ? "—" : stopsLabel(d.stops)} />
+            {op.layover_cities && op.layover_cities.length > 0 && (
+              <>
+                <Field
+                  label="中转地"
+                  value={op.layover_cities.map(code => `${airportCity(code) || code} (${code})`).join(" → ")}
+                />
+                <Field
+                  label="免费托运行李"
+                  value={op.free_checked_bag ? "包含免费额度" : "无免费行李额度"}
+                  tone={op.free_checked_bag ? "good" : "warn"}
+                />
+                <Field
+                  label="行李是否直挂"
+                  value={op.bag_recheck ? "在中转地需重新托运" : "直挂（无需重新托运）"}
+                  tone={op.bag_recheck ? "warn" : "good"}
+                />
+              </>
+            )}
             {d.variant && <Field label="替代目的地" value={d.variant} />}
           </CardContent>
         </Card>

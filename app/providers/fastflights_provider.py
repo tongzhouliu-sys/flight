@@ -94,6 +94,15 @@ class FastFlightsProvider:
             legs = getattr(f, "flights", None) or []
             if not price or price <= 0 or not legs:
                 continue
+            # 中转城市：各段到达机场（除最后一段）即中转点
+            layover_cities = []
+            for leg in legs[:-1]:
+                arr = getattr(leg, "arrival", None)
+                if arr is not None:
+                    # fast-flights arrival 对象含 airport_code 或 name
+                    code = getattr(arr, "airport_code", None) or getattr(arr, "code", None)
+                    if code and len(code) == 3:
+                        layover_cities.append(code)
             out.append(DetailOption(
                 price=float(price),
                 currency=self.currency,          # create_filter 已按 SGD 计价
@@ -101,6 +110,7 @@ class FastFlightsProvider:
                 stops=max(len(legs) - 1, 0),
                 depart_time=_to_dt(legs[0].departure),
                 arrive_time=_to_dt(legs[-1].arrival),
+                layover_cities=layover_cities if layover_cities else None,
             ))
         if not out:
             raise ProviderError("fast_flights returned empty result")

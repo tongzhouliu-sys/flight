@@ -67,6 +67,9 @@ export interface Opportunity {
   explain: Explain;
   detail: Record<string, unknown>;
   deeplink: string;
+  layover_cities: string[];
+  free_checked_bag: boolean;
+  bag_recheck: boolean;
 }
 
 export interface SearchMeta {

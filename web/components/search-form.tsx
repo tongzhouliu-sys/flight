@@ -215,7 +215,7 @@ export function SearchForm({
           <Button
             type="submit"
             size="lg"
-            className="w-full gap-2 sm:w-auto sm:self-end"
+            className="w-full gap-2 sm:w-auto sm:self-end bg-gradient-to-r from-primary to-info hover:opacity-95 hover:shadow-lg hover:shadow-primary/15 transition-all duration-200 font-semibold active:scale-[0.98]"
           >
             <Search className="h-4 w-4" />
             搜索省钱机会
@@ -236,17 +236,17 @@ function Segmented({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="inline-flex flex-wrap gap-1 rounded-lg border border-border bg-muted/40 p-1">
+    <div className="inline-flex flex-wrap gap-1 rounded-xl border border-border bg-muted/40 p-1">
       {options.map((o) => (
         <button
           key={o.value}
           type="button"
           onClick={() => onChange(o.value)}
           className={cn(
-            "rounded-md px-3 py-1.5 text-sm transition-colors",
+            "rounded-lg px-4 py-2 text-sm transition-all duration-200",
             value === o.value
-              ? "bg-card font-medium text-foreground shadow-sm"
-              : "text-muted-foreground hover:text-foreground",
+              ? "bg-card font-semibold text-foreground shadow-sm scale-[1.02] border border-border/20"
+              : "text-muted-foreground hover:text-foreground hover:bg-muted/50",
           )}
         >
           {o.label}

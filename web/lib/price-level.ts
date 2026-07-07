@@ -17,28 +17,28 @@ export interface LevelMeta {
 
 export const LEVEL_META: Record<PriceLevel, LevelMeta> = {
   great: {
-    zh: "超值",
+    zh: "捡到宝了",
     en: "Great deal · well below typical",
     tone: "good",
     icon: "flame",
     dot: "bg-good",
   },
   good: {
-    zh: "低于常态",
+    zh: "比平时便宜",
     en: "Below typical price",
     tone: "good",
     icon: "trending-down",
     dot: "bg-good",
   },
   normal: {
-    zh: "正常价格",
+    zh: "和往常差不多",
     en: "Typical price",
     tone: "warn",
     icon: "minus",
     dot: "bg-warn",
   },
   high: {
-    zh: "价格偏高",
+    zh: "现在买有点贵",
     en: "Above typical price",
     tone: "bad",
     icon: "trending-up",

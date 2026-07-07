@@ -54,19 +54,20 @@ def _run(query: SearchQuery, chain) -> dict:
     currency = points[0].currency
     cheapest = min(points, key=lambda p: float(p.price))
 
-    # 仅对最便宜日期钻取一次详情（carrier/stops），控制外呼次数
+    # 仅对最便宜日期钻取一次详情（carrier/stops/layover_cities），控制外呼次数
     detail_opt = adapter.fetch_cheapest_detail(chain, plan, cheapest.depart_date, cheapest.return_date)
     cheap_carrier = detail_opt.carrier if detail_opt else None
     cheap_stops = detail_opt.stops if detail_opt else None
+    cheap_layover_cities = detail_opt.layover_cities if detail_opt else None
 
     baggage = load_baggage()
     drafts: list[OpportunityDraft] = []
 
-    ds = _date_shift_draft(cfg, query, plan, points, cheapest, cheap_carrier, cheap_stops, prices)
+    ds = _date_shift_draft(cfg, query, plan, points, cheapest, cheap_carrier, cheap_stops, cheap_layover_cities, prices)
     if ds:
         drafts.append(ds)
 
-    bb = _baseline_breach_draft(cfg, query, plan, cheapest, cheap_carrier, cheap_stops, prices, chain)
+    bb = _baseline_breach_draft(cfg, query, plan, cheapest, cheap_carrier, cheap_stops, cheap_layover_cities, prices, chain)
     if bb:
         drafts.append(bb)
 
@@ -114,7 +115,7 @@ def _baseline_ctx(cfg, route_id, d, price):
     return base.p10, base.p15, base.p50, base.low_confidence, stats["pct"], stats["wlow"]
 
 
-def _date_shift_draft(cfg, query, plan, points, cheapest, carrier, stops, prices):
+def _date_shift_draft(cfg, query, plan, points, cheapest, carrier, stops, layover_cities, prices):
     if plan.center_date is None or len(points) < 2:
         return None
     by_date = {p.depart_date: p for p in points}
@@ -147,12 +148,13 @@ def _date_shift_draft(cfg, query, plan, points, cheapest, carrier, stops, prices
             "center_date": plan.center_date.isoformat(),
             "percentile_now": pct, "window_low": wlow, "low_confidence": low_conf,
             "p50": p50, "carrier": carrier, "stops": stops,
+            "layover_cities": layover_cities,
             "trigger": f"±灵活日期 最优 {best.depart_date.isoformat()}",
         },
     )
 
 
-def _baseline_breach_draft(cfg, query, plan, cheapest, carrier, stops, prices, chain):
+def _baseline_breach_draft(cfg, query, plan, cheapest, carrier, stops, layover_cities, prices, chain):
     price = float(cheapest.price)
     d = cheapest.depart_date
     p10 = p15 = p50 = None
@@ -181,6 +183,7 @@ def _baseline_breach_draft(cfg, query, plan, cheapest, carrier, stops, prices, c
         detail={
             "percentile_now": pct, "window_low": wlow, "low_confidence": low_conf,
             "p10": p10, "p15": p15, "p50": p50, "carrier": carrier, "stops": stops,
+            "layover_cities": layover_cities,
             "trigger": "阈值 P15",
         },
     )
@@ -251,6 +254,16 @@ def _serialize_point(p, currency, carrier, stops) -> dict:
 
 
 def _serialize_opportunity(query, d, risk, stars, action, color, currency) -> dict:
+    detail = d.detail
+    layover_cities = detail.get("layover_cities") or []
+    stops = detail.get("stops")
+    carrier = detail.get("carrier")
+    is_self_transfer = d.type == "self_transfer"
+    is_lcc = "lcc_baggage" in risk.tags
+    # 行李政策推断
+    free_checked_bag = not is_lcc and not is_self_transfer
+    bag_recheck = is_self_transfer  # 分开出票必须重新托运
+
     return {
         "type": d.type,
         "type_label": TYPE_LABELS.get(d.type, d.type),
@@ -275,6 +288,9 @@ def _serialize_opportunity(query, d, risk, stars, action, color, currency) -> di
         "explain": _build_explain(query, d, currency),
         "detail": _jsonable(d.detail),
         "deeplink": deeplink(query.origin, query.dest, d.depart_date, d.return_date),
+        "layover_cities": layover_cities,
+        "free_checked_bag": free_checked_bag,
+        "bag_recheck": bag_recheck,
     }
 
 

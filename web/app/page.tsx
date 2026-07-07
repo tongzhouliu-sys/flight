@@ -6,6 +6,7 @@ import { SearchForm } from "@/components/search-form";
 import { api } from "@/lib/api";
 import { airportCity } from "@/lib/airports";
 import { useSearchStore } from "@/store/search";
+import { useCurrencyStore } from "@/lib/currency";
 import type { RouteInfo, SearchParams } from "@/types";
 
 export default function Home() {
@@ -20,6 +21,7 @@ export default function Home() {
 
   useEffect(() => {
     if (replay) setReplay(null);
+    useCurrencyStore.getState().fetchRate();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -43,27 +45,34 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold tracking-tight">
-          5 秒看懂机票贵不贵
-        </h1>
-        <p className="text-sm text-muted-foreground">
-          实时查询航班价格，自动高亮更便宜的方案，并给出「买不买」的建议。
-        </p>
-        <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
-          <span className="inline-flex items-center gap-1.5">
-            <TrendingDown className="h-3.5 w-3.5 text-good" />
-            现在买贵不贵
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Sparkles className="h-3.5 w-3.5 text-info" />
-            有没有更便宜的方案
-          </span>
-          <span className="inline-flex items-center gap-1.5">
-            <Star className="h-3.5 w-3.5 text-warn" />
-            推荐买吗
-          </span>
+    <div className="flex flex-col gap-8">
+      {/* Premium Hero Section */}
+      <section className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 p-6 sm:p-8 shadow-md">
+        {/* Decorative background glow */}
+        <div className="absolute -top-24 -right-24 h-48 w-48 rounded-full bg-primary/10 blur-3xl animate-glow" />
+        <div className="absolute -bottom-24 -left-24 h-48 w-48 rounded-full bg-info/10 blur-3xl animate-glow" />
+
+        <div className="relative flex flex-col gap-3">
+          <h1 className="text-3xl sm:text-4xl font-extrabold tracking-tight bg-gradient-to-r from-foreground to-foreground/80 bg-clip-text">
+            5 秒看懂机票贵不贵
+          </h1>
+          <p className="text-sm sm:text-base text-muted-foreground max-w-xl">
+            实时查询航班价格，自动高亮更便宜的方案，智能给出「买不买」的决策推荐。
+          </p>
+          <div className="mt-2 flex flex-wrap gap-x-5 gap-y-2 text-xs font-medium">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-good/10 px-3 py-1 text-good">
+              <TrendingDown className="h-3.5 w-3.5" />
+              现在买贵不贵
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-info/10 px-3 py-1 text-info">
+              <Sparkles className="h-3.5 w-3.5" />
+              有没有更便宜的方案
+            </span>
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-warn/10 px-3 py-1 text-warn">
+              <Star className="h-3.5 w-3.5" />
+              推荐买吗
+            </span>
+          </div>
         </div>
       </section>
 

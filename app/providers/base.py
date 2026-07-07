@@ -27,6 +27,7 @@ class DetailOption:
     stops: int | None
     depart_time: datetime | None
     arrive_time: datetime | None
+    layover_cities: list[str] | None = None  # 中转机场 IATA 代码列表
 
 
 class CalendarProvider(Protocol):

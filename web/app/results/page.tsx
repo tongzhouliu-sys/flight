@@ -17,6 +17,7 @@ import { CABINS } from "@/lib/constants";
 import { fmtPrice } from "@/lib/format";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
+import { useCurrencyStore } from "@/lib/currency";
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -27,8 +28,12 @@ export default function ResultsPage() {
   const hydrate = useSearchStore((s) => s.hydrate);
   const runSearch = useSearchStore((s) => s.runSearch);
 
+  // 订阅汇率以支持响应式更新
+  useCurrencyStore((s) => s.rate);
+
   useEffect(() => {
     hydrate();
+    useCurrencyStore.getState().fetchRate();
   }, [hydrate]);
 
   if (status === "loading") return <Loading label="正在实时搜索航班与省钱机会…" />;
@@ -87,8 +92,8 @@ export default function ResultsPage() {
       </section>
 
       {/* 快速结论：5 秒回答三问 */}
-      <Card>
-        <CardContent className="grid gap-5 p-5 sm:grid-cols-3 sm:divide-x sm:divide-border">
+      <Card className="overflow-hidden border-primary/10 shadow-lg">
+        <CardContent className="grid gap-6 p-6 sm:grid-cols-3 sm:divide-x sm:divide-border/80 bg-gradient-to-br from-card via-card to-primary/5">
           <Verdict
             q="现在买贵不贵？"
             main={

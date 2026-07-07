@@ -68,6 +68,15 @@ class FliProvider:
             if f.price is None or not legs:
                 continue
             leg0 = legs[0]
+            # 中转城市：各段到达机场（除最后一段）即中转点
+            layover_cities = []
+            for leg in legs[:-1]:
+                arr_airport = getattr(leg, "arrival_airport", None)
+                if arr_airport is not None:
+                    # fli Airport 枚举：.name 是 IATA 代码
+                    code = getattr(arr_airport, "name", None) or str(arr_airport)
+                    if code and len(code) == 3:
+                        layover_cities.append(code)
             out.append(DetailOption(
                 price=float(f.price),
                 currency=(f.currency or self.currency),
@@ -75,6 +84,7 @@ class FliProvider:
                 stops=getattr(f, "stops", None),
                 depart_time=getattr(leg0, "departure_datetime", None),
                 arrive_time=getattr(legs[-1], "arrival_datetime", None),
+                layover_cities=layover_cities if layover_cities else None,
             ))
         if not out:
             raise ProviderError("fli returned empty result")

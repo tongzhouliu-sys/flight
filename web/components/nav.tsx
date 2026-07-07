@@ -15,13 +15,13 @@ const LINKS = [
 export function Nav() {
   const pathname = usePathname();
   return (
-    <header className="sticky top-0 z-20 border-b border-border bg-background/80 backdrop-blur-md">
+    <header className="sticky top-0 z-20 border-b border-border/80 bg-background/70 backdrop-blur-xl shadow-sm transition-all duration-300">
       <div className="mx-auto flex h-14 max-w-5xl items-center gap-2 px-4 sm:gap-6">
-        <Link href="/" className="flex items-center gap-2 font-semibold">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary">
-            <Plane className="h-4 w-4" />
+        <Link href="/" className="flex items-center gap-2.5 font-bold group">
+          <span className="flex h-8 w-8 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-info text-white shadow-md shadow-primary/20 transition-transform group-hover:scale-105">
+            <Plane className="h-4.5 w-4.5 -rotate-45" />
           </span>
-          <span className="tracking-tight">FareRadar</span>
+          <span className="tracking-tight text-lg gradient-text font-extrabold">FareRadar</span>
         </Link>
         <nav className="flex items-center gap-0.5 text-sm">
           {LINKS.map((l) => {

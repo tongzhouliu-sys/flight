@@ -23,9 +23,26 @@ export function currencyName(currency: string): string {
   return NAMES[currency] ?? currency;
 }
 
-/** 价格格式化：S$1,234（整数，千分位）。展示原币种，不换算。 */
+let globalRate = 5.3;
+
+export function setGlobalRate(rate: number) {
+  globalRate = rate;
+}
+
+export function getGlobalRate() {
+  return globalRate;
+}
+
+/** 价格格式化：转换非 CNY 币种（如 SGD）为 CNY 并以 ¥ 展示 */
 export function fmtPrice(value: number | null | undefined, currency = "SGD"): string {
   if (value == null) return "—";
+  if (currency === "SGD") {
+    const converted = value * globalRate;
+    return `¥${Math.round(converted).toLocaleString("en-US")}`;
+  }
+  if (currency === "CNY") {
+    return `¥${Math.round(value).toLocaleString("en-US")}`;
+  }
   return `${currencySymbol(currency)}${Math.round(value).toLocaleString("en-US")}`;
 }
 

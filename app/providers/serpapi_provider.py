@@ -69,6 +69,13 @@ class SerpApiProvider:
             if not price or not legs:
                 continue
             leg0, legN = legs[0], legs[-1]
+            # 中转城市：各段到达机场（除最后一段）即中转点
+            layover_cities = []
+            for leg in legs[:-1]:
+                arr_info = leg.get("arrival_airport") or {}
+                code = arr_info.get("id")
+                if code and len(code) == 3:
+                    layover_cities.append(code)
             out.append(DetailOption(
                 price=float(price),
                 currency=self.currency,
@@ -76,6 +83,7 @@ class SerpApiProvider:
                 stops=max(len(legs) - 1, 0),
                 depart_time=_parse_time((leg0.get("departure_airport") or {}).get("time")),
                 arrive_time=_parse_time((legN.get("arrival_airport") or {}).get("time")),
+                layover_cities=layover_cities if layover_cities else None,
             ))
         if not out:
             raise ProviderError("serpapi returned empty result")

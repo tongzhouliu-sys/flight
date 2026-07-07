@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils";
 import { fmtPrice, stopsLabel, weekday } from "@/lib/format";
 import { LEVEL_META, levelFromWindow } from "@/lib/price-level";
+import { useCurrencyStore } from "@/lib/currency";
 import type { CalendarResult } from "@/types";
 
 export function ResultsTable({
@@ -10,6 +11,9 @@ export function ResultsTable({
   results: CalendarResult[];
   currency: string;
 }) {
+  // 订阅汇率以支持响应式更新
+  useCurrencyStore((s) => s.rate);
+
   const sorted = [...results].sort((a, b) =>
     a.depart_date.localeCompare(b.depart_date),
   );
