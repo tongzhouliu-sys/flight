@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Clock, RotateCw } from "lucide-react";
 import { EmptyState } from "@/components/states";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -22,6 +23,7 @@ export default function HistoryPage() {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setEntries(getHistory());
     setMounted(true);
   }, []);
@@ -67,17 +69,22 @@ export default function HistoryPage() {
       ) : (
         <div className="flex flex-col gap-3">
           {entries.map((e) => (
-            <Card key={e.id}>
-              <CardContent className="flex flex-wrap items-center justify-between gap-3 pt-5">
-                <div>
-                  <p className="font-medium">{e.label}</p>
-                  <p className="mt-0.5 text-xs text-muted-foreground">
-                    {fmtTime(e.at)}
-                  </p>
+            <Card key={e.id} className="transition-colors hover:border-primary/30">
+              <CardContent className="flex flex-wrap items-center justify-between gap-3 p-5">
+                <div className="flex items-center gap-3">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
+                    <Clock className="h-4 w-4" />
+                  </span>
+                  <div>
+                    <p className="font-medium">{e.label}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {fmtTime(e.at)}
+                    </p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-2">
-                  <Button size="sm" onClick={() => replay(e)}>
-                    重新查询
+                  <Button size="sm" className="gap-1.5" onClick={() => replay(e)}>
+                    <RotateCw className="h-3.5 w-3.5" /> 重新查询
                   </Button>
                   <Button
                     size="sm"

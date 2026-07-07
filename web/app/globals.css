@@ -1,7 +1,8 @@
 @import "tailwindcss";
 
 /* 设计令牌 → Tailwind v4 主题（自动生成 bg-/text-/border- 等工具类）。
-   浅/深色跟随系统 prefers-color-scheme，与 Python 只读面板配色一致。 */
+   浅/深色三态：默认浅色；系统深色自动切换；用户可用主题按钮强制 light/dark。
+   令牌命名保持与既有组件一致，仅细化取值（Stripe / Linear / Vercel 风格）。 */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -14,55 +15,94 @@
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
   --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
   --color-good: var(--good);
   --color-warn: var(--warn);
   --color-bad: var(--bad);
   --color-info: var(--info);
-  --radius-lg: 0.75rem;
+  --color-ring: var(--ring);
+  --radius-md: 0.625rem;
+  --radius-lg: 0.875rem;
+  --radius-xl: 1.125rem;
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 }
 
+/* 浅色（默认） */
 :root {
-  --background: #f6f7f9;
-  --foreground: #1f2328;
+  --background: #fbfbfd;
+  --foreground: #1a1d21;
   --card: #ffffff;
-  --card-foreground: #1f2328;
-  --muted: #eef1f4;
-  --muted-foreground: #6b7280;
-  --border: #e5e7eb;
-  --input: #e5e7eb;
-  --primary: #1a73e8;
+  --card-foreground: #1a1d21;
+  --muted: #f1f3f5;
+  --muted-foreground: #656b74;
+  --border: #e7e9ec;
+  --input: #dfe2e6;
+  --primary: #2563eb;
   --primary-foreground: #ffffff;
-  --accent: #eaf1fe;
-  --good: #1e8e3e;
-  --warn: #b06000;
-  --bad: #d93025;
-  --info: #1a73e8;
+  --accent: #eef2ff;
+  --accent-foreground: #2b3aa0;
+  --good: #067647;
+  --warn: #b25e09;
+  --bad: #d92d20;
+  --info: #2563eb;
+  --ring: #2563eb;
+  --shadow-color: 220 30% 20%;
 }
 
+/* 强制深色（主题按钮） */
+:root[data-theme="dark"] {
+  --background: #0b0d10;
+  --foreground: #e8eaed;
+  --card: #14171c;
+  --card-foreground: #e8eaed;
+  --muted: #1c2027;
+  --muted-foreground: #9aa1ab;
+  --border: #262b33;
+  --input: #2b3139;
+  --primary: #6ea8fe;
+  --primary-foreground: #0b0d10;
+  --accent: #16233b;
+  --accent-foreground: #bcd3ff;
+  --good: #4ade80;
+  --warn: #fbbf24;
+  --bad: #f87171;
+  --info: #6ea8fe;
+  --ring: #6ea8fe;
+  --shadow-color: 220 40% 2%;
+}
+
+/* 系统深色：仅当用户未强制 light 时套用（强制 dark 已由 [data-theme=dark] 覆盖） */
 @media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0f1115;
+  :root:not([data-theme="light"]) {
+    --background: #0b0d10;
     --foreground: #e8eaed;
-    --card: #1a1d24;
+    --card: #14171c;
     --card-foreground: #e8eaed;
-    --muted: #242832;
-    --muted-foreground: #9aa0a6;
-    --border: #2a2e37;
-    --input: #2a2e37;
-    --primary: #8ab4f8;
-    --primary-foreground: #0f1115;
-    --accent: #1b2536;
-    --good: #34a853;
-    --warn: #f9ab00;
-    --bad: #ea4335;
-    --info: #8ab4f8;
+    --muted: #1c2027;
+    --muted-foreground: #9aa1ab;
+    --border: #262b33;
+    --input: #2b3139;
+    --primary: #6ea8fe;
+    --primary-foreground: #0b0d10;
+    --accent: #16233b;
+    --accent-foreground: #bcd3ff;
+    --good: #4ade80;
+    --warn: #fbbf24;
+    --bad: #f87171;
+    --info: #6ea8fe;
+    --ring: #6ea8fe;
+    --shadow-color: 220 40% 2%;
   }
 }
 
 * {
   box-sizing: border-box;
+  border-color: var(--border);
+}
+
+html {
+  color-scheme: light dark;
 }
 
 body {
@@ -71,8 +111,38 @@ body {
   font-family: var(--font-geist-sans), -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
   font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* 主题切换时软过渡（避免颜色硬跳） */
+body,
+.themed {
+  transition: background-color 0.2s ease, border-color 0.2s ease,
+    color 0.2s ease;
 }
 
 .tnum {
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum";
+}
+
+/* 统一柔和阴影层级（Linear/Vercel 风格：低对比、贴合边框） */
+.shadow-card {
+  box-shadow: 0 1px 2px 0 hsl(var(--shadow-color) / 0.04),
+    0 1px 3px 0 hsl(var(--shadow-color) / 0.06);
+}
+.shadow-pop {
+  box-shadow: 0 4px 12px -2px hsl(var(--shadow-color) / 0.12),
+    0 2px 6px -2px hsl(var(--shadow-color) / 0.08);
+}
+
+/* 细腻滚动条（表格横向滚动区） */
+.thin-scroll::-webkit-scrollbar {
+  height: 8px;
+}
+.thin-scroll::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 999px;
 }

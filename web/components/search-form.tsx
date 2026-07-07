@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -91,6 +92,7 @@ export function SearchForm({
 
   // 历史「重新查询」：带入 initial 后自动执行一次
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (autoSubmit && initial) submit();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -213,8 +215,13 @@ export function SearchForm({
 
           {error && <p className="text-sm font-medium text-bad">{error}</p>}
 
-          <Button type="submit" size="lg" className="w-full sm:w-auto sm:self-end">
-            搜索机会
+          <Button
+            type="submit"
+            size="lg"
+            className="w-full gap-2 sm:w-auto sm:self-end"
+          >
+            <Search className="h-4 w-4" />
+            搜索省钱机会
           </Button>
         </form>
       </CardContent>

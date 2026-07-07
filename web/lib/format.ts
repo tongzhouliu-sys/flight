@@ -6,11 +6,24 @@ const SYMBOLS: Record<string, string> = {
   EUR: "€",
 };
 
+// 币种全称（悬停辅助展示「完整原币种信息」）。数据源为单一原币种，前端不做汇率换算。
+const NAMES: Record<string, string> = {
+  SGD: "新加坡元 · SGD",
+  USD: "美元 · USD",
+  CNY: "人民币 · CNY",
+  HKD: "港元 · HKD",
+  EUR: "欧元 · EUR",
+};
+
 export function currencySymbol(currency: string): string {
   return SYMBOLS[currency] ?? `${currency} `;
 }
 
-/** 价格格式化：S$1,234（整数，千分位）。 */
+export function currencyName(currency: string): string {
+  return NAMES[currency] ?? currency;
+}
+
+/** 价格格式化：S$1,234（整数，千分位）。展示原币种，不换算。 */
 export function fmtPrice(value: number | null | undefined, currency = "SGD"): string {
   if (value == null) return "—";
   return `${currencySymbol(currency)}${Math.round(value).toLocaleString("en-US")}`;
@@ -34,8 +47,4 @@ export function stopsLabel(stops: number | null | undefined): string {
   if (stops == null) return "";
   if (stops === 0) return "直飞";
   return `${stops} 次中转`;
-}
-
-export function stars(n: number): string {
-  return "★".repeat(Math.max(0, n)) + "☆".repeat(Math.max(0, 4 - n));
 }

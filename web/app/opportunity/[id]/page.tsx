@@ -2,22 +2,22 @@
 
 import { useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
+import { ArrowLeft, ExternalLink } from "lucide-react";
 import { EmptyState, Loading } from "@/components/states";
+import { ExplainBlock } from "@/components/explain-block";
+import { Money } from "@/components/money";
+import { PriceLevelBadge } from "@/components/price-level-badge";
+import { PriceMeter } from "@/components/price-meter";
 import { RecommendationStars } from "@/components/recommendation-stars";
 import { RiskBadges } from "@/components/risk-badges";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { RISK_TAG_LABELS, TYPE_TONE } from "@/lib/constants";
+import { Tooltip } from "@/components/ui/tooltip";
+import { RISK_TAG_LABELS, RISK_TAG_TERMS, TYPE_TONE, oppMeta } from "@/lib/constants";
 import { fmtPrice, stopsLabel, weekday } from "@/lib/format";
+import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
-
-const RULE_NAME: Record<string, string> = {
-  baseline_breach: "BaselineBreach",
-  date_shift: "DateShiftRule",
-  nearby_airport: "NearbyAirportRule",
-  self_transfer: "SelfTransferRule",
-};
 
 interface OppDetail {
   percentile_now?: number | null;
@@ -63,41 +63,72 @@ export default function OpportunityDetailPage() {
 
   const d = op.detail as OppDetail;
   const cur = op.currency;
+  const meta = oppMeta(op.type, op.type_label);
+  const level = levelForOpportunity(readPercentile(op.detail), op.base_price, op.alt_price);
+
+  // 价格标尺区间：窗口最低 → 参考价，标记到手价（仅当有可用区间时展示）
+  const meterMin =
+    d.window_low != null ? Math.min(d.window_low, op.alt_price) : op.alt_price;
+  const meterMax = Math.max(op.base_price, op.alt_price);
+  const showMeter = meterMax > meterMin;
 
   return (
     <div className="flex flex-col gap-6">
       <button
         type="button"
         onClick={() => router.back()}
-        className="self-start text-sm text-muted-foreground hover:text-foreground"
+        className="flex items-center gap-1 self-start text-sm text-muted-foreground transition-colors hover:text-foreground"
       >
-        ← 返回结果
+        <ArrowLeft className="h-4 w-4" /> 返回结果
       </button>
 
       {/* 头部 */}
-      <section className="flex flex-wrap items-start justify-between gap-3">
+      <section className="flex flex-wrap items-start justify-between gap-4">
         <div className="flex flex-col gap-2">
-          <Badge tone={TYPE_TONE[op.type] ?? "muted"}>{op.type_label}</Badge>
-          <h1 className="text-2xl font-semibold">
-            {op.origin}→{op.dest}
+          <Tooltip label={meta.en}>
+            <Badge tone={TYPE_TONE[op.type] ?? "muted"}>{meta.zh}</Badge>
+          </Tooltip>
+          <h1 className="text-2xl font-semibold tracking-tight">
+            {op.origin} → {op.dest}
           </h1>
           <p className="text-sm text-muted-foreground">
             出发 {op.depart_date} {weekday(op.depart_date)}
             {op.return_date && ` · 返回 ${op.return_date}`}
           </p>
         </div>
-        <div className="text-right">
-          <p className="tnum text-3xl font-bold">
-            {fmtPrice(op.alt_price, cur)}
-          </p>
+        <div className="flex flex-col items-end gap-1.5">
+          <Money
+            value={op.alt_price}
+            currency={cur}
+            className="text-3xl font-bold tracking-tight"
+          />
           <p className="tnum text-sm font-medium text-good">
-            省 {fmtPrice(op.saving, cur)}
+            立省 {fmtPrice(op.saving, cur)}
           </p>
-          <div className="mt-2 flex justify-end">
+          <div className="flex items-center gap-2">
+            <PriceLevelBadge level={level} size="sm" />
             <RecommendationStars count={op.stars} action={op.action} />
           </div>
         </div>
       </section>
+
+      {/* 价格标尺：一眼看贵不贵 */}
+      {showMeter && (
+        <Card>
+          <CardContent className="p-5">
+            <PriceMeter
+              value={op.alt_price}
+              min={meterMin}
+              max={meterMax}
+              mid={d.p50 ?? null}
+              currency={cur}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* 推荐原因 */}
+      <ExplainBlock op={op} />
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* 航班信息 */}
@@ -112,11 +143,8 @@ export default function OpportunityDetailPage() {
               value={`${op.depart_date ?? "—"} ${weekday(op.depart_date)}`}
             />
             <Field label="返回日" value={op.return_date ?? "单程"} />
-            <Field label="承运" value={d.carrier ?? "—"} />
-            <Field
-              label="经停"
-              value={d.stops == null ? "—" : stopsLabel(d.stops)}
-            />
+            <Field label="航空公司" value={d.carrier ?? "—"} />
+            <Field label="中转" value={d.stops == null ? "—" : stopsLabel(d.stops)} />
             {d.variant && <Field label="替代目的地" value={d.variant} />}
           </CardContent>
         </Card>
@@ -127,9 +155,9 @@ export default function OpportunityDetailPage() {
             <CardTitle>价格构成</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
-            <Field label="成交价" value={fmtPrice(op.alt_price, cur)} strong />
+            <Field label="到手价" value={fmtPrice(op.alt_price, cur)} strong />
             <Field label="参考价" value={fmtPrice(op.base_price, cur)} />
-            <Field label="节省" value={fmtPrice(op.saving, cur)} tone="good" />
+            <Field label="立省" value={fmtPrice(op.saving, cur)} tone="good" />
             {op.effective_total != null && (
               <Field
                 label="托运折算总价"
@@ -140,31 +168,34 @@ export default function OpportunityDetailPage() {
               <Field label="行李费" value={fmtPrice(op.baggage_fee, cur)} />
             )}
             {d.shadow_price != null && (
-              <Field label="影子航线价" value={fmtPrice(d.shadow_price, cur)} />
+              <Field label="邻近机场票价" value={fmtPrice(d.shadow_price, cur)} />
             )}
             {d.adder_sgd != null && (
               <Field label="接驳加价" value={fmtPrice(d.adder_sgd, cur)} />
             )}
-            <Field label="币种" value={cur} />
           </CardContent>
         </Card>
 
-        {/* 基线水位 */}
+        {/* 价格水位 */}
         <Card>
           <CardHeader>
-            <CardTitle>基线水位</CardTitle>
+            <CardTitle className="flex items-center gap-2">
+              价格水位
+              <PriceLevelBadge level={level} size="sm" />
+            </CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
             <Field
               label="当前分位"
               value={d.percentile_now != null ? `P${d.percentile_now}` : "—"}
+              hint="百分位越低越便宜（P20 = 比历史 80% 的报价都低）"
             />
             <Field
               label="窗口最低"
               value={d.window_low != null ? fmtPrice(d.window_low, cur) : "—"}
             />
             <Field
-              label="P10 / P15 / P50"
+              label="历史价位 P10 / P15 / P50"
               value={
                 d.p10 != null || d.p15 != null || d.p50 != null
                   ? `${fmtPrice(d.p10 ?? null, cur)} / ${fmtPrice(d.p15 ?? null, cur)} / ${fmtPrice(d.p50 ?? null, cur)}`
@@ -172,80 +203,46 @@ export default function OpportunityDetailPage() {
               }
             />
             <Field
-              label="基线置信度"
-              value={d.low_confidence ? "低置信度" : "正常"}
+              label="参考价样本"
+              value={d.low_confidence ? "样本偏少（仅供参考）" : "充足"}
               tone={d.low_confidence ? "warn" : undefined}
             />
           </CardContent>
         </Card>
 
-        {/* 触发规则 */}
+        {/* 注意事项 */}
         <Card>
           <CardHeader>
-            <CardTitle>触发规则</CardTitle>
+            <CardTitle>注意事项</CardTitle>
           </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm">
-            <Field label="规则" value={RULE_NAME[op.type] ?? op.type} />
-            <Field label="触发条件" value={d.trigger ?? "—"} />
-            {d.center_date && <Field label="中心日期" value={d.center_date} />}
-            {d.best_date && <Field label="最优日期" value={d.best_date} />}
+          <CardContent className="flex flex-col gap-3 text-sm">
+            <RiskBadges tags={op.risk_tags} hardBlock={op.hard_block} />
+            {op.risk_tags.length > 0 && (
+              <ul className="flex flex-col gap-1.5 text-muted-foreground">
+                {op.risk_tags.map((t) => (
+                  <li key={t} className="flex items-baseline gap-1.5">
+                    <span className="text-muted-foreground">•</span>
+                    <span>
+                      <b className="text-foreground">
+                        {RISK_TAG_LABELS[t] ?? t}
+                      </b>
+                      <span className="ml-1 text-xs text-muted-foreground/70">
+                        {RISK_TAG_TERMS[t] ?? ""}
+                      </span>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
           </CardContent>
         </Card>
       </div>
 
-      {/* 风险 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>风险说明</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <RiskBadges tags={op.risk_tags} hardBlock={op.hard_block} />
-          {op.risk_tags.length > 0 && (
-            <ul className="flex flex-col gap-1.5 text-muted-foreground">
-              {op.risk_tags.map((t) => (
-                <li key={t}>
-                  • <b className="text-foreground">{RISK_TAG_LABELS[t] ?? t}</b>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* 推荐 + 预留评分 */}
-      <Card>
-        <CardHeader>
-          <CardTitle>推荐原因</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-3 text-sm">
-          <div className="flex items-center gap-3">
-            <RecommendationStars count={op.stars} action={op.action} />
-          </div>
-          <p className="text-muted-foreground">{op.explain.text}</p>
-          <div className="grid grid-cols-2 gap-3 border-t border-border pt-3">
-            <Field
-              label="风险评分（预留）"
-              value={op.risk_score != null ? String(op.risk_score) : "待定"}
-            />
-            <Field
-              label="推荐评分（预留）"
-              value={
-                op.recommendation_score != null
-                  ? String(op.recommendation_score)
-                  : "待定"
-              }
-            />
-          </div>
-          <p className="text-xs text-muted-foreground">
-            数值评分模型尚未在后端定义，字段已预留；当前以真实标签与 1–4★
-            建议档展示。
-          </p>
-        </CardContent>
-      </Card>
-
       <div className="flex flex-wrap gap-3">
         <a href={op.deeplink} target="_blank" rel="noopener noreferrer">
-          <Button>打开 Google Flights</Button>
+          <Button className="gap-1.5">
+            打开 Google Flights <ExternalLink className="h-4 w-4" />
+          </Button>
         </a>
         <Button variant="outline" onClick={() => router.push("/")}>
           新搜索
@@ -260,15 +257,24 @@ function Field({
   value,
   strong,
   tone,
+  hint,
 }: {
   label: string;
   value: string;
   strong?: boolean;
   tone?: "good" | "warn";
+  hint?: string;
 }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="text-muted-foreground">
+        {label}
+        {hint && (
+          <Tooltip label={hint}>
+            <span className="ml-1 cursor-help text-muted-foreground/60">ⓘ</span>
+          </Tooltip>
+        )}
+      </span>
       <span
         className={[
           "tnum text-right",

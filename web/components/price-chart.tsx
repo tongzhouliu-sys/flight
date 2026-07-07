@@ -12,7 +12,7 @@ import {
   type ChartOptions,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import { currencySymbol } from "@/lib/format";
+import { currencySymbol, weekday } from "@/lib/format";
 import type { CalendarResult } from "@/types";
 
 ChartJS.register(
@@ -40,16 +40,22 @@ export function PriceChart({
   currency: string;
 }) {
   const [mounted, setMounted] = useState(false);
-  useEffect(() => setMounted(true), []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // Canvas 仅客户端渲染，颜色随主题从 CSS 变量读取
-  if (!mounted) return <div className="h-64 w-full" />;
+  if (!mounted) return <div className="h-64 w-full animate-pulse rounded-lg bg-muted/50" />;
 
   const sorted = [...results].sort((a, b) =>
     a.depart_date.localeCompare(b.depart_date),
   );
-  const line = cssVar("--primary", "#1a73e8");
-  const grid = "rgba(128,128,128,0.15)";
+  const prices = sorted.map((r) => r.price);
+  const min = Math.min(...prices);
+  const line = cssVar("--primary", "#2563eb");
+  const good = cssVar("--good", "#067647");
+  const grid = "rgba(128,128,128,0.14)";
   const tick = cssVar("--muted-foreground", "#6b7280");
   const sym = currencySymbol(currency);
 
@@ -57,14 +63,21 @@ export function PriceChart({
     labels: sorted.map((r) => r.depart_date.slice(5)),
     datasets: [
       {
-        data: sorted.map((r) => r.price),
+        data: prices,
         borderColor: line,
-        backgroundColor: "rgba(26,115,232,0.10)",
+        backgroundColor: "rgba(37,99,235,0.08)",
         fill: true,
         tension: 0.3,
-        pointRadius: sorted.length > 30 ? 0 : 3,
-        pointHoverRadius: 5,
         borderWidth: 2,
+        // 最低价点：绿色放大，便于一眼定位最划算日期
+        pointRadius: sorted.map((r) =>
+          r.price === min ? 5 : sorted.length > 30 ? 0 : 2.5,
+        ),
+        pointHoverRadius: 5,
+        pointBackgroundColor: sorted.map((r) =>
+          r.price === min ? good : line,
+        ),
+        pointBorderColor: sorted.map((r) => (r.price === min ? good : line)),
       },
     ],
   };
@@ -76,8 +89,17 @@ export function PriceChart({
       legend: { display: false },
       tooltip: {
         callbacks: {
-          label: (ctx) =>
-            `${sym}${Math.round(Number(ctx.parsed.y ?? 0)).toLocaleString("en-US")}`,
+          title: (items) => {
+            const r = sorted[items[0].dataIndex];
+            return `${r.depart_date} ${weekday(r.depart_date)}`;
+          },
+          label: (ctx) => {
+            const price = Math.round(Number(ctx.parsed.y ?? 0)).toLocaleString(
+              "en-US",
+            );
+            const tag = sorted[ctx.dataIndex].price === min ? "（最低）" : "";
+            return `${sym}${price}${tag}`;
+          },
         },
       },
     },

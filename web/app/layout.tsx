@@ -14,9 +14,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "FareRadar · 机票机会发现",
-  description: "实时搜索航班并高亮低价机会（基线击穿 / 日期平移 / 邻近机场）。",
+  title: "FareRadar · 机票省钱雷达",
+  description: "实时搜索航班，5 秒看懂：现在贵不贵、有没有更便宜的方案、推不推荐买。",
 };
+
+// 首屏前同步设置主题，避免深浅色闪烁（FOUC）。
+const THEME_INIT = `(function(){try{var t=localStorage.getItem('fareradar:theme');if(t==='light'||t==='dark'){document.documentElement.dataset.theme=t;}}catch(e){}})();`;
 
 export default function RootLayout({
   children,
@@ -26,9 +29,12 @@ export default function RootLayout({
       lang="zh"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
+      </head>
       <body className="min-h-full">
         <Nav />
-        <main className="mx-auto max-w-5xl px-4 py-6">{children}</main>
+        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
       </body>
     </html>
   );

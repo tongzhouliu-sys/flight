@@ -2,13 +2,19 @@
 
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { ArrowLeft, Sparkles } from "lucide-react";
 import { OpportunityCard } from "@/components/opportunity-card";
 import { PriceChart } from "@/components/price-chart";
 import { ResultsTable } from "@/components/results-table";
 import { EmptyState, ErrorState, Loading } from "@/components/states";
-import { Badge } from "@/components/ui/badge";
+import { Money } from "@/components/money";
+import { PriceLevelBadge } from "@/components/price-level-badge";
+import { RecommendationStars } from "@/components/recommendation-stars";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CABINS } from "@/lib/constants";
 import { fmtPrice } from "@/lib/format";
+import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 
 export default function ResultsPage() {
@@ -24,7 +30,7 @@ export default function ResultsPage() {
     hydrate();
   }, [hydrate]);
 
-  if (status === "loading") return <Loading label="正在实时搜索航班与机会…" />;
+  if (status === "loading") return <Loading label="正在实时搜索航班与省钱机会…" />;
 
   if (status === "error")
     return (
@@ -44,62 +50,126 @@ export default function ResultsPage() {
     );
 
   const { results, opportunities, meta, query } = response;
-  const cheapest = results.length
-    ? Math.min(...results.map((r) => r.price))
+  const cur = meta.currency;
+  const prices = results.map((r) => r.price);
+  const cheapest = prices.length ? Math.min(...prices) : null;
+  const highest = prices.length ? Math.max(...prices) : null;
+  const cabinLabel =
+    CABINS.find((c) => c.value === query.cabin)?.label ?? query.cabin;
+
+  const top = opportunities[0]; // 已按 saving 倒序
+  const topLevel = top
+    ? levelForOpportunity(readPercentile(top.detail), top.base_price, top.alt_price)
     : null;
 
   return (
-    <div className="flex flex-col gap-6">
-      {/* 概览 */}
-      <section className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <h1 className="text-2xl font-semibold">
-            {query.origin}→{query.dest}
-          </h1>
-          <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-            <span>{query.trip_type === "round_trip" ? "往返" : "单程"}</span>
-            <span>·</span>
-            <span>{query.cabin}</span>
-            <span>·</span>
-            <span>{query.adults} 人</span>
-            {cheapest != null && (
-              <>
-                <span>·</span>
-                <span>
-                  最低{" "}
-                  <b className="tnum text-good">
-                    {fmtPrice(cheapest, meta.currency)}
-                  </b>
-                </span>
-              </>
-            )}
-          </p>
-        </div>
-        <div className="flex flex-wrap items-center gap-2">
-          {meta.provider && <Badge tone="muted">数据源 {meta.provider}</Badge>}
-          {meta.monitored_route_id && (
-            <Badge tone="info">监控航线 {meta.monitored_route_id}</Badge>
-          )}
-          {meta.cached && <Badge tone="warn">缓存</Badge>}
-          <Badge tone="muted">{meta.point_count} 个采样日</Badge>
-          <Button variant="outline" size="sm" onClick={() => router.push("/")}>
-            新搜索
-          </Button>
+    <div className="flex flex-col gap-8">
+      {/* 头部 */}
+      <section className="flex flex-col gap-3">
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="flex items-center gap-1 self-start text-sm text-muted-foreground transition-colors hover:text-foreground"
+        >
+          <ArrowLeft className="h-4 w-4" /> 新搜索
+        </button>
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-2xl font-semibold tracking-tight">
+              {query.origin} → {query.dest}
+            </h1>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"}{" "}
+              · {query.adults} 人 · 采样 {meta.point_count} 天
+              {meta.cached && " · 缓存快照"}
+            </p>
+          </div>
         </div>
       </section>
 
-      {/* 推荐机会 */}
+      {/* 快速结论：5 秒回答三问 */}
+      <Card>
+        <CardContent className="grid gap-5 p-5 sm:grid-cols-3 sm:divide-x sm:divide-border">
+          <Verdict
+            q="现在买贵不贵？"
+            main={
+              cheapest != null ? (
+                <Money
+                  value={cheapest}
+                  currency={cur}
+                  className="text-2xl font-bold tracking-tight"
+                />
+              ) : (
+                "—"
+              )
+            }
+            extra={
+              topLevel ? (
+                <PriceLevelBadge level={topLevel} size="sm" />
+              ) : cheapest != null && highest != null && highest > cheapest ? (
+                <span className="text-xs text-muted-foreground">
+                  区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
+                </span>
+              ) : null
+            }
+          />
+          <Verdict
+            q="有没有更便宜的方案？"
+            className="sm:pl-5"
+            main={
+              top ? (
+                <span className="tnum text-2xl font-bold tracking-tight text-good">
+                  最多省 {fmtPrice(top.saving, cur)}
+                </span>
+              ) : (
+                <span className="text-lg font-medium text-muted-foreground">
+                  暂未发现
+                </span>
+              )
+            }
+            extra={
+              <span className="text-xs text-muted-foreground">
+                {opportunities.length > 0
+                  ? `共 ${opportunities.length} 个省钱机会`
+                  : "当前窗口价格已较平稳"}
+              </span>
+            }
+          />
+          <Verdict
+            q="推荐买吗？"
+            className="sm:pl-5"
+            main={
+              top ? (
+                <RecommendationStars count={top.stars} action={top.action} />
+              ) : (
+                <span className="text-lg font-medium text-muted-foreground">
+                  继续关注
+                </span>
+              )
+            }
+            extra={
+              <span className="text-xs text-muted-foreground">
+                {top
+                  ? "基于历史价位与风险综合判断"
+                  : "暂无明显买点，价格波动时再看"}
+              </span>
+            }
+          />
+        </CardContent>
+      </Card>
+
+      {/* 省钱机会 */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          推荐机会（{opportunities.length}）
-        </h2>
+        <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
+          省钱机会（{opportunities.length}）
+        </SectionTitle>
         {opportunities.length === 0 ? (
           <EmptyState
-            title="未发现明显机会"
-            hint="当前窗口内价格无显著优惠，可查看下方原始价格或调整日期灵活度。"
+            title="未发现明显省钱机会"
+            hint="当前窗口内价格无显著优惠，可查看下方全部日期价格，或放宽日期灵活度再搜。"
           />
         ) : (
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid items-stretch gap-4 md:grid-cols-2">
             {opportunities.map((op, i) => (
               <OpportunityCard key={`${op.type}-${i}`} op={op} index={i} />
             ))}
@@ -107,25 +177,58 @@ export default function ResultsPage() {
         )}
       </section>
 
-      {/* 价格曲线 */}
+      {/* 价格趋势 */}
       {results.length > 1 && (
         <section>
-          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            价格曲线
-          </h2>
-          <div className="rounded-xl border border-border bg-card p-4">
-            <PriceChart results={results} currency={meta.currency} />
-          </div>
+          <SectionTitle>价格趋势</SectionTitle>
+          <Card>
+            <CardContent className="p-4">
+              <PriceChart results={results} currency={cur} />
+            </CardContent>
+          </Card>
         </section>
       )}
 
-      {/* 原始结果 */}
+      {/* 全部日期价格 */}
       <section>
-        <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-          原始价格（{results.length}）
-        </h2>
-        <ResultsTable results={results} currency={meta.currency} />
+        <SectionTitle>全部日期价格（{results.length}）</SectionTitle>
+        <ResultsTable results={results} currency={cur} />
       </section>
     </div>
+  );
+}
+
+function Verdict({
+  q,
+  main,
+  extra,
+  className,
+}: {
+  q: string;
+  main: React.ReactNode;
+  extra?: React.ReactNode;
+  className?: string;
+}) {
+  return (
+    <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
+      <p className="text-xs font-medium text-muted-foreground">{q}</p>
+      <div className="flex min-h-9 items-center">{main}</div>
+      {extra && <div className="flex items-center gap-2">{extra}</div>}
+    </div>
+  );
+}
+
+function SectionTitle({
+  children,
+  icon,
+}: {
+  children: React.ReactNode;
+  icon?: React.ReactNode;
+}) {
+  return (
+    <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-foreground">
+      {icon}
+      {children}
+    </h2>
   );
 }

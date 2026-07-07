@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { MapPin, Sparkles, Star, TrendingDown } from "lucide-react";
 import { SearchForm } from "@/components/search-form";
 import { api } from "@/lib/api";
 import { useSearchStore } from "@/store/search";
@@ -42,17 +43,33 @@ export default function Home() {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-1">
-        <h1 className="text-2xl font-semibold">搜索航班机会</h1>
+      <section className="flex flex-col gap-2">
+        <h1 className="text-2xl font-semibold tracking-tight">
+          5 秒看懂机票贵不贵
+        </h1>
         <p className="text-sm text-muted-foreground">
-          实时查询航班价格，并高亮基线击穿、日期平移、邻近机场等低价机会。
+          实时查询航班价格，自动高亮更便宜的方案，并给出「买不买」的建议。
         </p>
+        <div className="mt-1 flex flex-wrap gap-x-5 gap-y-1.5 text-xs text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <TrendingDown className="h-3.5 w-3.5 text-good" />
+            现在买贵不贵
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Sparkles className="h-3.5 w-3.5 text-info" />
+            有没有更便宜的方案
+          </span>
+          <span className="inline-flex items-center gap-1.5">
+            <Star className="h-3.5 w-3.5 text-warn" />
+            推荐买吗
+          </span>
+        </div>
       </section>
 
       {routes.length > 0 && (
         <section>
-          <p className="mb-2 text-xs font-medium text-muted-foreground">
-            监控航线快捷填充
+          <p className="mb-2 flex items-center gap-1.5 text-xs font-medium text-muted-foreground">
+            <MapPin className="h-3.5 w-3.5" /> 监控航线快捷填充
           </p>
           <div className="flex flex-wrap gap-2">
             {routes.map((r) => (
@@ -60,10 +77,12 @@ export default function Home() {
                 key={r.id}
                 type="button"
                 onClick={() => pickRoute(r)}
-                className="rounded-full border border-border bg-card px-3 py-1 text-sm transition-colors hover:bg-muted"
+                className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-sm transition-colors hover:border-primary/30 hover:bg-muted"
               >
-                {r.origin}→{r.dest}
-                <span className="ml-1.5 text-xs text-muted-foreground">
+                <span className="font-medium">
+                  {r.origin} → {r.dest}
+                </span>
+                <span className="rounded bg-muted px-1.5 py-px text-[11px] text-muted-foreground">
                   {r.tier}
                 </span>
               </button>
