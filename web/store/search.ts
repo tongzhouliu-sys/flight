@@ -13,9 +13,11 @@ interface SearchState {
   response: SearchResponse | null;
   status: Status;
   error: string | null;
+  replay: SearchParams | null; // 历史「重新查询」时回填首页表单
   runSearch: (params: SearchParams) => Promise<void>;
   hydrate: () => void;
   reset: () => void;
+  setReplay: (params: SearchParams | null) => void;
 }
 
 export const useSearchStore = create<SearchState>((set, get) => ({
@@ -23,6 +25,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   response: null,
   status: "idle",
   error: null,
+  replay: null,
 
   async runSearch(params) {
     set({ status: "loading", error: null, params, response: null });
@@ -57,5 +60,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   reset() {
     set({ params: null, response: null, status: "idle", error: null });
     if (typeof window !== "undefined") sessionStorage.removeItem(SESSION_KEY);
+  },
+
+  setReplay(params) {
+    set({ replay: params });
   },
 }));
