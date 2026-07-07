@@ -15,6 +15,10 @@ jobs:
           python-version: "3.12"
           cache: pip
       - run: pip install -r requirements.txt
+      - run: python scripts/bootstrap_db.py
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          TZ: Asia/Singapore
       - run: python -m app.jobs.daily_scan
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
