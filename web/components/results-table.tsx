@@ -22,25 +22,25 @@ export function ResultsTable({
   const max = prices.length ? Math.max(...prices) : 0;
 
   return (
-    <div className="flex flex-col gap-2">
+    <div className="flex flex-col gap-2 md:h-full md:min-h-0">
       {/* 图例：说明圆点为本次窗口内相对价位 */}
-      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
-        <span>本次窗口内相对价位</span>
+      <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground shrink-0 px-1">
+        <span>本次窗口内相对价位:</span>
         <Legend dot="bg-good" label="偏低" />
         <Legend dot="bg-warn" label="中等" />
         <Legend dot="bg-bad" label="偏高" />
       </div>
-
-      <div className="thin-scroll overflow-x-auto rounded-xl border border-border">
-        <table className="w-full min-w-[560px] text-sm">
+ 
+      <div className="thin-scroll overflow-auto rounded-xl border border-border flex-1 min-h-0 bg-card">
+        <table className="w-full min-w-[560px] text-sm relative border-collapse">
           <thead>
-            <tr className="border-b border-border text-left text-xs uppercase tracking-wide text-muted-foreground">
-              <th className="px-4 py-2.5 font-medium">出发日</th>
-              <th className="px-4 py-2.5 font-medium">星期</th>
-              <th className="px-4 py-2.5 font-medium">返回日</th>
-              <th className="px-4 py-2.5 font-medium">价格</th>
-              <th className="px-4 py-2.5 font-medium">航空公司</th>
-              <th className="px-4 py-2.5 font-medium">中转</th>
+            <tr className="text-left text-xs uppercase tracking-wide text-muted-foreground">
+              <th className="sticky top-0 bg-card z-10 px-4 py-2.5 font-medium border-b border-border shadow-[inset_0_-1px_0_var(--color-border)]">出发日</th>
+              <th className="sticky top-0 bg-card z-10 px-4 py-2.5 font-medium border-b border-border shadow-[inset_0_-1px_0_var(--color-border)]">星期</th>
+              <th className="sticky top-0 bg-card z-10 px-4 py-2.5 font-medium border-b border-border shadow-[inset_0_-1px_0_var(--color-border)]">返回日</th>
+              <th className="sticky top-0 bg-card z-10 px-4 py-2.5 font-medium border-b border-border shadow-[inset_0_-1px_0_var(--color-border)]">价格</th>
+              <th className="sticky top-0 bg-card z-10 px-4 py-2.5 font-medium border-b border-border shadow-[inset_0_-1px_0_var(--color-border)]">航空公司</th>
+              <th className="sticky top-0 bg-card z-10 px-4 py-2.5 font-medium border-b border-border shadow-[inset_0_-1px_0_var(--color-border)]">中转</th>
             </tr>
           </thead>
           <tbody>

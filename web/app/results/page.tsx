@@ -69,135 +69,145 @@ export default function ResultsPage() {
     : null;
 
   return (
-    <div className="flex flex-col gap-8">
-      {/* 头部 */}
-      <section className="flex flex-col gap-3">
-        <button
-          type="button"
-          onClick={() => router.push("/")}
-          className="flex items-center gap-1 self-start text-sm text-muted-foreground transition-colors hover:text-foreground"
-        >
-          <ArrowLeft className="h-4 w-4" /> 新搜索
-        </button>
-        <div className="flex flex-wrap items-end justify-between gap-3">
+    <div className="flex flex-col md:grid md:grid-cols-12 gap-5 md:h-full md:overflow-hidden">
+      {/* 左侧栏：汇总信息、快速结论、省钱机会 */}
+      <div className="flex flex-col gap-4 md:col-span-5 md:h-full md:overflow-hidden">
+        {/* 头部航线概要 */}
+        <section className="flex items-center justify-between gap-2 p-1 shrink-0">
           <div>
             <RouteLabel origin={query.origin} dest={query.dest} size="lg" />
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="mt-0.5 text-xs text-muted-foreground">
               {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"}{" "}
               · {query.adults} 人 · 采样 {meta.point_count} 天
-              {meta.cached && " · 缓存快照"}
+              {meta.cached && " · 缓存"}
             </p>
           </div>
-        </div>
-      </section>
-
-      {/* 快速结论：5 秒回答三问 */}
-      <Card className="overflow-hidden border-primary/10 shadow-lg">
-        <CardContent className="grid gap-6 p-6 sm:grid-cols-3 sm:divide-x sm:divide-border/80 bg-gradient-to-br from-card via-card to-primary/5">
-          <Verdict
-            q="现在买贵不贵？"
-            main={
-              cheapest != null ? (
-                <Money
-                  value={cheapest}
-                  currency={cur}
-                  className="text-2xl font-bold tracking-tight"
-                />
-              ) : (
-                "—"
-              )
-            }
-            extra={
-              topLevel ? (
-                <PriceLevelBadge level={topLevel} size="sm" />
-              ) : cheapest != null && highest != null && highest > cheapest ? (
-                <span className="text-xs text-muted-foreground">
-                  区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
-                </span>
-              ) : null
-            }
-          />
-          <Verdict
-            q="有没有更便宜的方案？"
-            className="sm:pl-5"
-            main={
-              top ? (
-                <span className="tnum text-2xl font-bold tracking-tight text-good">
-                  最多省 {fmtPrice(top.saving, cur)}
-                </span>
-              ) : (
-                <span className="text-lg font-medium text-muted-foreground">
-                  暂未发现
-                </span>
-              )
-            }
-            extra={
-              <span className="text-xs text-muted-foreground">
-                {opportunities.length > 0
-                  ? `共 ${opportunities.length} 个省钱机会`
-                  : "当前窗口价格已较平稳"}
-              </span>
-            }
-          />
-          <Verdict
-            q="推荐买吗？"
-            className="sm:pl-5"
-            main={
-              top ? (
-                <RecommendationStars count={top.stars} action={top.action} />
-              ) : (
-                <span className="text-lg font-medium text-muted-foreground">
-                  继续关注
-                </span>
-              )
-            }
-            extra={
-              <span className="text-xs text-muted-foreground">
-                {top
-                  ? "基于历史价位与风险综合判断"
-                  : "暂无明显买点，价格波动时再看"}
-              </span>
-            }
-          />
-        </CardContent>
-      </Card>
-
-      {/* 省钱机会 */}
-      <section>
-        <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
-          省钱机会（{opportunities.length}）
-        </SectionTitle>
-        {opportunities.length === 0 ? (
-          <EmptyState
-            title="未发现明显省钱机会"
-            hint="当前窗口内价格无显著优惠，可查看下方全部日期价格，或放宽日期灵活度再搜。"
-          />
-        ) : (
-          <div className="grid items-stretch gap-4 md:grid-cols-2">
-            {opportunities.map((op, i) => (
-              <OpportunityCard key={`${op.type}-${i}`} op={op} index={i} />
-            ))}
-          </div>
-        )}
-      </section>
-
-      {/* 价格趋势 */}
-      {results.length > 1 && (
-        <section>
-          <SectionTitle>价格趋势</SectionTitle>
-          <Card>
-            <CardContent className="p-4">
-              <PriceChart results={results} currency={cur} />
-            </CardContent>
-          </Card>
+          <button
+            type="button"
+            onClick={() => router.push("/")}
+            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground border border-border bg-card px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-muted cursor-pointer"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> 新搜索
+          </button>
         </section>
-      )}
 
-      {/* 全部日期价格 */}
-      <section>
-        <SectionTitle>全部日期价格（{results.length}）</SectionTitle>
-        <ResultsTable results={results} currency={cur} />
-      </section>
+        {/* 快速结论：5 秒回答三问 */}
+        <Card className="overflow-hidden border-primary/10 shadow-sm shrink-0">
+          <CardContent className="grid gap-4 p-4 grid-cols-3 divide-x divide-border/80 bg-gradient-to-br from-card via-card to-primary/5">
+            <Verdict
+              q="现在买贵不贵？"
+              main={
+                cheapest != null ? (
+                  <Money
+                    value={cheapest}
+                    currency={cur}
+                    className="text-lg font-bold tracking-tight"
+                  />
+                ) : (
+                  "—"
+                )
+              }
+              extra={
+                topLevel ? (
+                  <PriceLevelBadge level={topLevel} size="sm" />
+                ) : cheapest != null && highest != null && highest > cheapest ? (
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
+                  </span>
+                ) : null
+              }
+            />
+            <Verdict
+              q="有没有更便宜？"
+              className="pl-3"
+              main={
+                top ? (
+                  <span className="tnum text-lg font-bold tracking-tight text-good">
+                    省 {fmtPrice(top.saving, cur)}
+                  </span>
+                ) : (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    暂未发现
+                  </span>
+                )
+              }
+              extra={
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {opportunities.length > 0
+                    ? `共 ${opportunities.length} 个省钱机会`
+                    : "当前窗口较平稳"}
+                </span>
+              }
+            />
+            <Verdict
+              q="推荐买吗？"
+              className="pl-3"
+              main={
+                top ? (
+                  <RecommendationStars count={top.stars} action={top.action} />
+                ) : (
+                  <span className="text-sm font-medium text-muted-foreground">
+                    继续关注
+                  </span>
+                )
+              }
+              extra={
+                <span className="text-[10px] text-muted-foreground truncate">
+                  {top ? "基于历史与风险" : "暂无明显买点"}
+                </span>
+              }
+            />
+          </CardContent>
+        </Card>
+
+        {/* 省钱机会 */}
+        <section className="flex-1 min-h-0 flex flex-col gap-2">
+          <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
+            省钱机会（{opportunities.length}）
+          </SectionTitle>
+          <div className="flex-1 min-h-0 overflow-y-auto pr-1 thin-scroll flex flex-col gap-3">
+            {opportunities.length === 0 ? (
+              <div className="flex-1 flex items-center justify-center p-6 border border-dashed rounded-xl bg-muted/10 text-center">
+                <div>
+                  <p className="text-sm font-medium text-muted-foreground">未发现明显省钱机会</p>
+                  <p className="mt-1 text-xs text-muted-foreground/60 max-w-xs">当前窗口内价格无显著优惠，可查看右侧全部价格。</p>
+                </div>
+              </div>
+            ) : (
+              <div className="grid items-stretch gap-3 grid-cols-1">
+                {opportunities.map((op, i) => (
+                  <OpportunityCard key={`${op.type}-${i}`} op={op} index={i} />
+                ))}
+              </div>
+            )}
+          </div>
+        </section>
+      </div>
+
+      {/* 右侧栏：价格趋势、全部日期表格 */}
+      <div className="flex flex-col gap-4 md:col-span-7 md:h-full md:overflow-hidden">
+        {/* 价格趋势 */}
+        {results.length > 1 && (
+          <section className="shrink-0 flex flex-col gap-2">
+            <SectionTitle>价格趋势</SectionTitle>
+            <Card className="shadow-sm">
+              <CardContent className="p-3">
+                <div className="h-40 md:h-44 relative">
+                  <PriceChart results={results} currency={cur} />
+                </div>
+              </CardContent>
+            </Card>
+          </section>
+        )}
+
+        {/* 全部日期价格 */}
+        <section className="flex-1 min-h-0 flex flex-col gap-2">
+          <SectionTitle>全部日期价格（{results.length}）</SectionTitle>
+          <div className="flex-1 min-h-0">
+            <ResultsTable results={results} currency={cur} />
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
