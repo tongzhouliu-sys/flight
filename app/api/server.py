@@ -11,11 +11,13 @@ from fastapi.responses import HTMLResponse
 
 from app.api.commands import dispatch_command
 from app.api.dashboard import render_dashboard
+from app.api.web_api import router as web_router
 from app.notify.feishu import send_text
 from app.settings import settings
 
 log = logging.getLogger("fareradar.api")
 app = FastAPI(title="FareRadar")
+app.include_router(web_router)
 
 
 @app.get("/healthz")
