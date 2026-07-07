@@ -21,6 +21,7 @@ import { formatAirport, airportCity } from "@/lib/airports";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 import { useCurrencyStore } from "@/lib/currency";
+import { getFaqAndRemarks, formatDuration, formatDateTime, formatTimeOnly } from "@/lib/visa-baggage";
 
 interface OppDetail {
   percentile_now?: number | null;
@@ -37,6 +38,8 @@ interface OppDetail {
   variant?: string;
   adder_sgd?: number;
   shadow_price?: number;
+  depart_time?: string | null;
+  arrive_time?: string | null;
 }
 
 export default function OpportunityDetailPage() {
@@ -70,6 +73,15 @@ export default function OpportunityDetailPage() {
 
   const d = op.detail as OppDetail;
   const cur = op.currency;
+  const faqs = getFaqAndRemarks(
+    op.origin,
+    op.dest,
+    op.layover_cities || [],
+    op.free_checked_bag,
+    op.bag_recheck,
+    d.depart_time ?? null,
+    d.arrive_time ?? null
+  );
   const meta = oppMeta(op.type, op.type_label);
   const level = levelForOpportunity(readPercentile(op.detail), op.base_price, op.alt_price);
 
@@ -151,11 +163,26 @@ export default function OpportunityDetailPage() {
             <Field label="航空公司" value={d.carrier ?? "—"} />
             <Field label="中转" value={d.stops == null ? "—" : stopsLabel(d.stops)} />
             {op.layover_cities && op.layover_cities.length > 0 && (
+              <Field
+                label="中转地"
+                value={op.layover_cities.map(code => `${airportCity(code) || code} (${code})`).join(" → ")}
+              />
+            )}
+            {d.depart_time && (
+              <Field label="起飞时间" value={formatDateTime(d.depart_time)} />
+            )}
+            {d.arrive_time && (
+              <Field label="抵达时间" value={formatDateTime(d.arrive_time)} />
+            )}
+            {d.depart_time && d.arrive_time && (
+              <Field
+                label="总航程"
+                value={formatDuration(d.depart_time, d.arrive_time)}
+                strong
+              />
+            )}
+            {op.layover_cities && op.layover_cities.length > 0 && (
               <>
-                <Field
-                  label="中转地"
-                  value={op.layover_cities.map(code => `${airportCity(code) || code} (${code})`).join(" → ")}
-                />
                 <Field
                   label="免费托运行李"
                   value={op.free_checked_bag ? "包含免费额度" : "无免费行李额度"}
@@ -169,6 +196,52 @@ export default function OpportunityDetailPage() {
               </>
             )}
             {d.variant && <Field label="替代目的地" value={d.variant} />}
+
+            {/* 航程路线可视化时间线 */}
+            {d.depart_time && d.arrive_time && (
+              <div className="mt-4 rounded-xl bg-muted/20 p-3.5 border border-border/50">
+                <p className="mb-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">航程路线示意</p>
+                <div className="relative flex items-center justify-between gap-1 px-1">
+                  {/* Timeline track line */}
+                  <div className="absolute left-6 right-6 top-[18px] h-0.5 border-t border-dashed border-border" />
+                  
+                  {/* Origin node */}
+                  <div className="relative z-10 flex flex-col items-center">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs ring-4 ring-card">
+                      {op.origin}
+                    </div>
+                    <span className="mt-1 text-xs font-bold text-foreground">{airportCity(op.origin)}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTimeOnly(d.depart_time)}</span>
+                  </div>
+
+                  {/* Layover nodes (if any) */}
+                  {op.layover_cities && op.layover_cities.length > 0 && 
+                    op.layover_cities.map((cityCode) => (
+                      <div key={cityCode} className="relative z-10 flex flex-col items-center">
+                        <div className={`flex h-9 w-9 items-center justify-center rounded-full font-semibold text-xs ring-4 ring-card ${op.bag_recheck ? 'bg-warn/10 text-warn border border-warn/30' : 'bg-muted text-muted-foreground'}`}>
+                          {cityCode}
+                        </div>
+                        <span className="mt-1 text-xs font-medium text-foreground truncate max-w-[70px]">
+                          {airportCity(cityCode) || cityCode}
+                        </span>
+                        <span className="text-[10px] text-muted-foreground">
+                          {op.bag_recheck ? "需提行李" : "直挂中转"}
+                        </span>
+                      </div>
+                    ))
+                  }
+
+                  {/* Destination node */}
+                  <div className="relative z-10 flex flex-col items-center">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-info/10 text-info font-bold text-xs ring-4 ring-card">
+                      {op.dest}
+                    </div>
+                    <span className="mt-1 text-xs font-bold text-foreground">{airportCity(op.dest)}</span>
+                    <span className="text-[10px] text-muted-foreground">{formatTimeOnly(d.arrive_time)}</span>
+                  </div>
+                </div>
+              </div>
+            )}
           </CardContent>
         </Card>
 
@@ -260,6 +333,59 @@ export default function OpportunityDetailPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* 常见问题与旅行建议 (备注解答) */}
+      <Card>
+        <CardHeader className="pb-3 border-b border-border/50">
+          <CardTitle className="flex flex-wrap items-center gap-2 text-base md:text-lg">
+            <span>✈️ 出行解答与签证/行李备注</span>
+            <span className="text-xs font-normal text-muted-foreground">（持中国普通护照专属建议）</span>
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="pt-4 flex flex-col gap-4">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* 行李相关 */}
+            <div className="flex flex-col gap-4">
+              <h3 className="text-sm font-bold text-foreground border-l-2 border-primary pl-2 mb-1 flex items-center gap-1.5">
+                <span>🧳</span> 行李托运解答
+              </h3>
+              {faqs
+                .filter((item) => item.type === "baggage")
+                .map((item, idx) => (
+                  <div key={idx} className={`rounded-xl p-4 border transition-all ${item.warning ? 'bg-warn/5 border-warn/25' : 'bg-muted/20 border-border/50'}`}>
+                    <h4 className="text-sm font-bold text-foreground mb-2 flex items-start gap-1">
+                      <span className="text-primary mt-0.5 font-mono text-xs">Q:</span>
+                      <span>{item.q}</span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line pl-4">
+                      {item.a}
+                    </p>
+                  </div>
+                ))}
+            </div>
+
+            {/* 签证相关 */}
+            <div className="flex flex-col gap-4">
+              <h3 className="text-sm font-bold text-foreground border-l-2 border-info pl-2 mb-1 flex items-center gap-1.5">
+                <span>🛂</span> 中国护照签证解答
+              </h3>
+              {faqs
+                .filter((item) => item.type === "visa")
+                .map((item, idx) => (
+                  <div key={idx} className={`rounded-xl p-4 border transition-all ${item.warning ? 'bg-bad/5 border-bad/20' : 'bg-muted/20 border-border/50'}`}>
+                    <h4 className="text-sm font-bold text-foreground mb-2 flex items-start gap-1">
+                      <span className="text-info mt-0.5 font-mono text-xs">Q:</span>
+                      <span>{item.q}</span>
+                    </h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed whitespace-pre-line pl-4 text-justify">
+                      {item.a}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       <div className="flex flex-wrap gap-3">
         <a href={op.deeplink} target="_blank" rel="noopener noreferrer">

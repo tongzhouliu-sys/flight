@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search } from "lucide-react";
+import { ArrowLeftRight, Search } from "lucide-react";
 import { AirportCombobox } from "@/components/airport-combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -109,8 +109,8 @@ export function SearchForm({
           className="flex flex-col gap-5"
         >
           {/* 机场 */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
+          <div className="relative grid gap-4 sm:grid-cols-[1fr_auto_1fr] items-end">
+            <div className="w-full">
               <Label htmlFor="origin">出发机场</Label>
               <AirportCombobox
                 id="origin"
@@ -119,7 +119,26 @@ export function SearchForm({
                 placeholder="输入城市或机场代码，如 SIN"
               />
             </div>
-            <div>
+
+            {/* 左右对调按钮 */}
+            <div className="flex justify-center pb-0.5 sm:pb-1">
+              <button
+                type="button"
+                onClick={() => {
+                  setForm((f) => ({
+                    ...f,
+                    origin: f.dest,
+                    dest: f.origin,
+                  }));
+                }}
+                className="flex h-9 w-9 items-center justify-center rounded-full border border-border bg-card text-muted-foreground transition-all hover:bg-muted hover:text-foreground active:scale-95 shadow-sm cursor-pointer"
+                title="对调出发/到达机场"
+              >
+                <ArrowLeftRight className="h-4 w-4 rotate-90 sm:rotate-0" />
+              </button>
+            </div>
+
+            <div className="w-full">
               <Label htmlFor="dest">到达机场</Label>
               <AirportCombobox
                 id="dest"

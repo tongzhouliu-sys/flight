@@ -32,9 +32,9 @@ export default function RootLayout({
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
       </head>
-      <body className="min-h-full gradient-bg">
+      <body className="min-h-full md:h-screen md:overflow-hidden flex flex-col gradient-bg">
         <Nav />
-        <main className="mx-auto max-w-5xl px-4 py-8">{children}</main>
+        <main className="mx-auto w-full max-w-5xl px-4 py-4 md:py-6 flex-1 min-h-0">{children}</main>
       </body>
     </html>
   );

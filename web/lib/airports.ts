@@ -12,6 +12,8 @@ export interface AirportInfo {
   city: string;
   /** 所在城市（英文，辅助搜索） */
   cityEn: string;
+  /** 拼音及首字母（辅助搜索） */
+  pinyin: string;
 }
 
 const AIRPORTS: AirportInfo[] = [

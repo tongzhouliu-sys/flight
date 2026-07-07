@@ -59,15 +59,17 @@ def _run(query: SearchQuery, chain) -> dict:
     cheap_carrier = detail_opt.carrier if detail_opt else None
     cheap_stops = detail_opt.stops if detail_opt else None
     cheap_layover_cities = detail_opt.layover_cities if detail_opt else None
+    cheap_depart_time = detail_opt.depart_time.isoformat() if (detail_opt and detail_opt.depart_time) else None
+    cheap_arrive_time = detail_opt.arrive_time.isoformat() if (detail_opt and detail_opt.arrive_time) else None
 
     baggage = load_baggage()
     drafts: list[OpportunityDraft] = []
 
-    ds = _date_shift_draft(cfg, query, plan, points, cheapest, cheap_carrier, cheap_stops, cheap_layover_cities, prices)
+    ds = _date_shift_draft(cfg, query, plan, points, cheapest, cheap_carrier, cheap_stops, cheap_layover_cities, prices, cheap_depart_time, cheap_arrive_time)
     if ds:
         drafts.append(ds)
 
-    bb = _baseline_breach_draft(cfg, query, plan, cheapest, cheap_carrier, cheap_stops, cheap_layover_cities, prices, chain)
+    bb = _baseline_breach_draft(cfg, query, plan, cheapest, cheap_carrier, cheap_stops, cheap_layover_cities, prices, chain, cheap_depart_time, cheap_arrive_time)
     if bb:
         drafts.append(bb)
 
@@ -115,7 +117,7 @@ def _baseline_ctx(cfg, route_id, d, price):
     return base.p10, base.p15, base.p50, base.low_confidence, stats["pct"], stats["wlow"]
 
 
-def _date_shift_draft(cfg, query, plan, points, cheapest, carrier, stops, layover_cities, prices):
+def _date_shift_draft(cfg, query, plan, points, cheapest, carrier, stops, layover_cities, prices, depart_time=None, arrive_time=None):
     if plan.center_date is None or len(points) < 2:
         return None
     by_date = {p.depart_date: p for p in points}
@@ -149,12 +151,14 @@ def _date_shift_draft(cfg, query, plan, points, cheapest, carrier, stops, layove
             "percentile_now": pct, "window_low": wlow, "low_confidence": low_conf,
             "p50": p50, "carrier": carrier, "stops": stops,
             "layover_cities": layover_cities,
+            "depart_time": depart_time,
+            "arrive_time": arrive_time,
             "trigger": f"±灵活日期 最优 {best.depart_date.isoformat()}",
         },
     )
 
 
-def _baseline_breach_draft(cfg, query, plan, cheapest, carrier, stops, layover_cities, prices, chain):
+def _baseline_breach_draft(cfg, query, plan, cheapest, carrier, stops, layover_cities, prices, chain, depart_time=None, arrive_time=None):
     price = float(cheapest.price)
     d = cheapest.depart_date
     p10 = p15 = p50 = None
@@ -184,6 +188,8 @@ def _baseline_breach_draft(cfg, query, plan, cheapest, carrier, stops, layover_c
             "percentile_now": pct, "window_low": wlow, "low_confidence": low_conf,
             "p10": p10, "p15": p15, "p50": p50, "carrier": carrier, "stops": stops,
             "layover_cities": layover_cities,
+            "depart_time": depart_time,
+            "arrive_time": arrive_time,
             "trigger": "阈值 P15",
         },
     )
