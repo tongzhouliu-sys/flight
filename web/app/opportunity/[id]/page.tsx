@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plane, Utensils, Share2, Compass, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react";
 import { EmptyState, Loading } from "@/components/states";
 import { ExplainBlock } from "@/components/explain-block";
 import { Money } from "@/components/money";
@@ -17,11 +17,56 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
 import { RISK_TAG_LABELS, RISK_TAG_TERMS, TYPE_TONE, oppMeta } from "@/lib/constants";
 import { fmtPrice, stopsLabel, weekday } from "@/lib/format";
-import { formatAirport, airportCity } from "@/lib/airports";
+import { formatAirport, airportCity, getAirport } from "@/lib/airports";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 import { useCurrencyStore } from "@/lib/currency";
-import { getFaqAndRemarks, formatDuration, formatDateTime, formatTimeOnly } from "@/lib/visa-baggage";
+import { getFaqAndRemarks, formatDuration, formatDateTime, formatTimeOnly, generateItinerary } from "@/lib/visa-baggage";
+
+const TERMINALS: Record<string, string> = {
+  LAX: "TB", MNL: "T1", XMN: "T3", SIN: "T3", PVG: "T2", PEK: "T3", SZX: "T3", CAN: "T2",
+  HKG: "T1", TPE: "T2", NRT: "T2", HND: "T3", KIX: "T1", ICN: "T1", BKK: "T1", KUL: "T1",
+  DXB: "T3", DOH: "T1", LHR: "T2", CDG: "T2E", FRA: "T1", JFK: "T4", SFO: "TI"
+};
+
+function formatAirportWithLang(code: string, isEn: boolean): string {
+  const a = getAirport(code);
+  if (!a) return code;
+  if (isEn) {
+    return `${a.cityEn} Airport (${a.code})`;
+  } else {
+    if (a.name.startsWith(a.city)) {
+      return a.name;
+    }
+    return `${a.city}${a.name}`;
+  }
+}
+
+function formatDateAndWeekday(isoStr: string, isEn: boolean): { dateLabel: string; weekdayLabel: string } {
+  if (!isoStr) return { dateLabel: "", weekdayLabel: "" };
+  const dateStr = isoStr.split("T")[0];
+  const dateObj = new Date(dateStr);
+  const m = dateObj.getMonth();
+  const d = dateObj.getDate();
+  const w = dateObj.getDay();
+
+  const realMonthsZh = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+  const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const weekdaysZh = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const weekdaysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  if (isEn) {
+    return {
+      dateLabel: `${monthsEn[m]} ${d}`,
+      weekdayLabel: weekdaysEn[w],
+    };
+  } else {
+    return {
+      dateLabel: `${realMonthsZh[m]}${d}日`,
+      weekdayLabel: weekdaysZh[w],
+    };
+  }
+}
 
 interface OppDetail {
   percentile_now?: number | null;
@@ -73,6 +118,23 @@ export default function OpportunityDetailPage() {
 
   const d = op.detail as OppDetail;
   const cur = op.currency;
+
+  const [lang, setLang] = useState<"zh" | "en">("zh");
+  const [copied, setCopied] = useState(false);
+
+  const handleShare = () => {
+    try {
+      const summaryText = lang === "zh"
+        ? `【机票雷达·行程分享】\n航线：${formatAirportWithLang(op.origin, false)} ➔ ${formatAirportWithLang(op.dest, false)}\n出发日：${op.depart_date}\n到手价：${fmtPrice(op.alt_price, cur)}\n立省：${fmtPrice(op.saving, cur)}！`
+        : `[FareRadar Itinerary Share]\nRoute: ${formatAirportWithLang(op.origin, true)} ➔ ${formatAirportWithLang(op.dest, true)}\nDeparture: ${op.depart_date}\nPrice: ${fmtPrice(op.alt_price, cur)}\nSavings: ${fmtPrice(op.saving, cur)}!`;
+      navigator.clipboard.writeText(summaryText);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
   const faqs = getFaqAndRemarks(
     op.origin,
     op.dest,
@@ -149,99 +211,244 @@ export default function OpportunityDetailPage() {
 
       <div className="grid gap-4 md:grid-cols-2">
         {/* 航班信息 */}
-        <Card>
-          <CardHeader>
-            <CardTitle>航班信息</CardTitle>
-          </CardHeader>
-          <CardContent className="flex flex-col gap-2 text-sm">
-            <Field label="航线" value={`${formatAirport(op.origin)} → ${formatAirport(op.dest)}`} />
-            <Field
-              label="出发日"
-              value={`${op.depart_date ?? "—"} ${weekday(op.depart_date)}`}
-            />
-            <Field label="返回日" value={op.return_date ?? "单程"} />
-            <Field label="航空公司" value={d.carrier ?? "—"} />
-            <Field label="中转" value={d.stops == null ? "—" : stopsLabel(d.stops)} />
-            {op.layover_cities && op.layover_cities.length > 0 && (
-              <Field
-                label="中转地"
-                value={op.layover_cities.map(code => `${airportCity(code) || code} (${code})`).join(" → ")}
-              />
-            )}
-            {d.depart_time && (
-              <Field label="起飞时间" value={formatDateTime(d.depart_time)} />
-            )}
-            {d.arrive_time && (
-              <Field label="抵达时间" value={formatDateTime(d.arrive_time)} />
-            )}
-            {d.depart_time && d.arrive_time && (
-              <Field
-                label="总航程"
-                value={formatDuration(d.depart_time, d.arrive_time)}
-                strong
-              />
-            )}
-            {op.layover_cities && op.layover_cities.length > 0 && (
-              <>
-                <Field
-                  label="免费托运行李"
-                  value={op.free_checked_bag ? "包含免费额度" : "无免费行李额度"}
-                  tone={op.free_checked_bag ? "good" : "warn"}
-                />
-                <Field
-                  label="行李是否直挂"
-                  value={op.bag_recheck ? "在中转地需重新托运" : "直挂（无需重新托运）"}
-                  tone={op.bag_recheck ? "warn" : "good"}
-                />
-              </>
-            )}
-            {d.variant && <Field label="替代目的地" value={d.variant} />}
-
-            {/* 航程路线可视化时间线 */}
-            {d.depart_time && d.arrive_time && (
-              <div className="mt-4 rounded-xl bg-muted/20 p-3.5 border border-border/50">
-                <p className="mb-3 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">航程路线示意</p>
-                <div className="relative flex items-center justify-between gap-1 px-1">
-                  {/* Timeline track line */}
-                  <div className="absolute left-6 right-6 top-[18px] h-0.5 border-t border-dashed border-border" />
-                  
-                  {/* Origin node */}
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-xs ring-4 ring-card">
-                      {op.origin}
-                    </div>
-                    <span className="mt-1 text-xs font-bold text-foreground">{airportCity(op.origin)}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatTimeOnly(d.depart_time)}</span>
-                  </div>
-
-                  {/* Layover nodes (if any) */}
-                  {op.layover_cities && op.layover_cities.length > 0 && 
-                    op.layover_cities.map((cityCode) => (
-                      <div key={cityCode} className="relative z-10 flex flex-col items-center">
-                        <div className={`flex h-9 w-9 items-center justify-center rounded-full font-semibold text-xs ring-4 ring-card ${op.bag_recheck ? 'bg-warn/10 text-warn border border-warn/30' : 'bg-muted text-muted-foreground'}`}>
-                          {cityCode}
-                        </div>
-                        <span className="mt-1 text-xs font-medium text-foreground truncate max-w-[70px]">
-                          {airportCity(cityCode) || cityCode}
-                        </span>
-                        <span className="text-[10px] text-muted-foreground">
-                          {op.bag_recheck ? "需提行李" : "直挂中转"}
-                        </span>
-                      </div>
-                    ))
-                  }
-
-                  {/* Destination node */}
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-info/10 text-info font-bold text-xs ring-4 ring-card">
-                      {op.dest}
-                    </div>
-                    <span className="mt-1 text-xs font-bold text-foreground">{airportCity(op.dest)}</span>
-                    <span className="text-[10px] text-muted-foreground">{formatTimeOnly(d.arrive_time)}</span>
-                  </div>
-                </div>
+        <Card className="flex flex-col h-full border border-border">
+          <CardHeader className="flex flex-row items-center justify-between pb-3 border-b border-border/50">
+            <div className="flex flex-col gap-0.5">
+              <CardTitle className="text-base font-bold text-foreground">
+                {lang === "en" ? "Flight Information" : "航班信息"}
+              </CardTitle>
+              <p className="text-[10px] text-muted-foreground font-medium">
+                {lang === "en" ? "Departure/arrival times are in local time" : "航班起降时间均为当地时间"}
+              </p>
+            </div>
+            
+            <div className="flex items-center gap-2">
+              {/* Language Switcher Toggles */}
+              <div className="inline-flex rounded-lg border border-border bg-muted/40 p-0.5 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setLang("zh")}
+                  className={[
+                    "px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer",
+                    lang === "zh"
+                      ? "bg-card text-foreground shadow-sm scale-[1.02]"
+                      : "text-muted-foreground hover:text-foreground"
+                  ].join(" ")}
+                >
+                  中文
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setLang("en")}
+                  className={[
+                    "px-2.5 py-1 rounded-md font-bold transition-all cursor-pointer",
+                    lang === "en"
+                      ? "bg-card text-foreground shadow-sm scale-[1.02]"
+                      : "text-muted-foreground hover:text-foreground"
+                  ].join(" ")}
+                >
+                  英文
+                </button>
               </div>
-            )}
+              
+              {/* Share Itinerary Button */}
+              <button
+                type="button"
+                onClick={handleShare}
+                className="flex items-center gap-1.5 text-xs font-bold border border-border bg-card hover:bg-muted/50 text-foreground px-2.5 py-1.5 rounded-lg shadow-sm transition-all cursor-pointer active:scale-[0.98]"
+              >
+                <Share2 className="h-3.5 w-3.5 text-primary" />
+                <span>{copied ? (lang === "en" ? "Copied!" : "已复制") : (lang === "en" ? "Share" : "行程分享")}</span>
+              </button>
+            </div>
+          </CardHeader>
+          
+          <CardContent className="pt-4 flex-1 flex flex-col gap-5 overflow-y-auto">
+            {/* Itinerary Trip Type & Duration Summary */}
+            <div className="flex items-center gap-2 pb-1 text-sm border-b border-border/30 shrink-0">
+              <span className="bg-emerald-500/10 text-emerald-600 font-bold px-2 py-0.5 rounded text-[10px] uppercase tracking-wide">
+                {op.return_date ? (lang === "en" ? "Round Trip" : "往返") : (lang === "en" ? "One Way" : "单程")}
+              </span>
+              <span className="font-semibold text-foreground text-xs">
+                {op.depart_date && (
+                  <span>
+                    {lang === "en"
+                      ? formatDateAndWeekday(d.depart_time || "", true).dateLabel
+                      : formatDateAndWeekday(d.depart_time || "", false).dateLabel
+                    }
+                    {" "}
+                    {lang === "en"
+                      ? formatDateAndWeekday(d.depart_time || "", true).weekdayLabel
+                      : formatDateAndWeekday(d.depart_time || "", false).weekdayLabel
+                    }
+                  </span>
+                )}
+                <span className="mx-2 text-muted-foreground">|</span>
+                <span className="text-muted-foreground">
+                  {lang === "en" ? "Total duration: " : "总时长 "}
+                  <b className="text-foreground">
+                    {d.depart_time && d.arrive_time
+                      ? formatDuration(d.depart_time, d.arrive_time)
+                      : "—"
+                    }
+                  </b>
+                </span>
+              </span>
+            </div>
+
+            {/* Timeline sectors */}
+            <div className="flex flex-col pr-1">
+              {generateItinerary(op, lang === "en").map((item, idx) => {
+                if (item.type === "flight") {
+                  return (
+                    <div key={idx} className="flex gap-4">
+                      {/* Left: Timings & Dates */}
+                      <div className="w-20 shrink-0 text-right flex flex-col justify-between py-1 text-xs">
+                        <div>
+                          <div className="font-bold text-base text-foreground tracking-tight">{item.departTime}</div>
+                          <div className="text-[10px] text-muted-foreground font-semibold">
+                            {item.departDate} {item.departWeekday}
+                          </div>
+                        </div>
+                        
+                        <div className="my-4 text-[10px] text-muted-foreground/80 font-bold flex flex-col items-end gap-0.5 justify-center flex-1">
+                          <span>{item.duration}</span>
+                          {item.arriveDateLabel && (
+                            <span className="text-warn font-extrabold bg-warn/5 border border-warn/15 px-1.5 py-0.5 rounded mt-0.5 text-[9px]">
+                              {item.arriveDateLabel}
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div>
+                          <div className="font-bold text-base text-foreground tracking-tight">{item.arriveTime}</div>
+                          {item.arriveDateLabel && (
+                            <div className="text-[10px] text-muted-foreground font-semibold">
+                              {item.arriveDate}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Middle: Line Track */}
+                      <div className="flex flex-col items-center py-1.5 shrink-0">
+                        <div className="h-3.5 w-3.5 rounded-full border-2 border-primary bg-card z-10 shrink-0 shadow-sm flex items-center justify-center">
+                          <div className="h-1.5 w-1.5 rounded-full bg-primary" />
+                        </div>
+                        <div className="w-0.5 border-l-2 border-dashed border-border/70 flex-1 my-1.5 min-h-[80px]" />
+                        <div className="h-3.5 w-3.5 rounded-full border-2 border-info bg-card z-10 shrink-0 shadow-sm flex items-center justify-center">
+                          <div className="h-1.5 w-1.5 rounded-full bg-info" />
+                        </div>
+                      </div>
+
+                      {/* Right: Airports, details, and cards */}
+                      <div className="flex-1 flex flex-col justify-between py-0.5 min-w-0">
+                        {/* Departure Airport */}
+                        <div className="font-semibold text-sm text-foreground flex items-center gap-1.5 truncate">
+                          <span className="font-extrabold text-primary shrink-0 text-base">{item.origin}</span>
+                          <span className="truncate text-muted-foreground font-medium text-xs">
+                            {formatAirportWithLang(item.origin || "", lang === "en")}
+                          </span>
+                          {item.terminal && (
+                            <span className="text-[9px] font-extrabold bg-muted border border-border px-1.5 py-0.5 rounded text-muted-foreground shrink-0 uppercase">
+                              {item.terminal}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Direct Flight Card */}
+                        <div className="my-3 p-3.5 rounded-xl border border-border/80 bg-card/60 hover:bg-muted/10 transition-colors shadow-sm flex flex-wrap items-center justify-between gap-3 text-xs">
+                          <div className="flex items-center gap-2 font-semibold text-foreground">
+                            <span className="h-6 w-6 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                              <Plane className="h-4 w-4 rotate-45 animate-pulse" />
+                            </span>
+                            <span className="text-foreground">{item.carrier} <b className="text-primary font-extrabold">{item.flightNumber}</b></span>
+                          </div>
+                          
+                          <div className="flex flex-wrap items-center gap-2 text-muted-foreground font-medium">
+                            <span className="px-2 py-0.5 bg-muted/60 border border-border/30 rounded text-[10px]">{item.cabin}</span>
+                            {item.aircraft && (
+                              <span className="px-2 py-0.5 bg-muted/60 border border-border/30 rounded text-[10px] truncate max-w-[120px]">{item.aircraft}</span>
+                            )}
+                            <span className="flex items-center gap-1 text-[10px] text-good bg-good/5 border border-good/15 px-2 py-0.5 rounded font-semibold shrink-0">
+                              <Utensils className="h-3.5 w-3.5 text-good shrink-0 animate-bounce" />
+                              {item.meals}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Arrival Airport */}
+                        <div className="font-semibold text-sm text-foreground flex items-center gap-1.5 truncate">
+                          <span className="font-extrabold text-info shrink-0 text-base">{item.dest}</span>
+                          <span className="truncate text-muted-foreground font-medium text-xs">
+                            {formatAirportWithLang(item.dest || "", lang === "en")}
+                          </span>
+                          {TERMINALS[item.dest || ""] && (
+                            <span className="text-[9px] font-extrabold bg-muted border border-border px-1.5 py-0.5 rounded text-muted-foreground shrink-0 uppercase">
+                              {TERMINALS[item.dest || ""]}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (item.type === "layover") {
+                  return (
+                    <div key={idx} className="flex gap-4 my-2">
+                      {/* Left Spacer */}
+                      <div className="w-20 shrink-0 text-right" />
+                      
+                      {/* Middle: Timeline track connector */}
+                      <div className="flex flex-col items-center shrink-0">
+                        <div className="w-0.5 border-l-2 border-dashed border-border/70 flex-1 min-h-[50px]" />
+                      </div>
+                      
+                      {/* Right: Layover card details */}
+                      <div className="flex-1 py-1">
+                        <div className="bg-muted/40 border border-border/50 rounded-xl p-3.5 flex flex-col gap-2 transition-colors hover:bg-muted/50">
+                          <div className="flex items-center gap-2 font-bold text-foreground text-xs">
+                            <span className="h-5 w-5 rounded-full bg-info/10 text-info flex items-center justify-center text-[10px] shrink-0 font-extrabold">
+                              {lang === "en" ? "T" : "转"}
+                            </span>
+                            <span>
+                              {lang === "en" ? "Layover in" : "中转"} <b className="text-info font-extrabold">{item.city}</b> · {item.layoverDuration}
+                            </span>
+                          </div>
+                          
+                          {/* Warnings / Badges */}
+                          {item.warnings && item.warnings.length > 0 && (
+                            <div className="flex flex-wrap gap-1.5">
+                              {item.warnings.map((w, wIdx) => {
+                                const isWarning = w.includes("提醒") || w.includes("Alert") || w.includes("recheck") || w.includes("非直挂") || w.includes("需");
+                                return (
+                                  <span
+                                    key={wIdx}
+                                    className={[
+                                      "px-2.5 py-0.5 rounded-full text-[10px] font-bold border flex items-center gap-1",
+                                      isWarning
+                                        ? "bg-bad/5 text-bad border-bad/20"
+                                        : "bg-good/5 text-good border-good/20",
+                                    ].join(" ")}
+                                  >
+                                    {isWarning ? (
+                                      <AlertTriangle className="h-3 w-3 shrink-0" />
+                                    ) : (
+                                      <CheckCircle2 className="h-3 w-3 shrink-0" />
+                                    )}
+                                    <span>{w}</span>
+                                  </span>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })}
+            </div>
           </CardContent>
         </Card>
 

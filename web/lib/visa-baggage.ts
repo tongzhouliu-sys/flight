@@ -435,3 +435,513 @@ export function formatTimeOnly(isoStr: string | null): string {
     return "—";
   }
 }
+
+// ── 机场经纬度与时区偏移数据库 ──
+
+const COORDS: Record<string, [number, number]> = {
+  SIN: [1.3644, 103.9915],
+  PVG: [31.1433, 121.8053],
+  SHA: [31.1979, 121.3363],
+  PEK: [40.0799, 116.6031],
+  PKX: [39.5098, 116.4105],
+  CAN: [23.3924, 113.2988],
+  SZX: [22.6393, 113.8107],
+  CTU: [30.5785, 103.9471],
+  TFU: [30.3175, 104.4447],
+  CKG: [29.7180, 106.6417],
+  HGH: [30.2295, 120.4344],
+  NKG: [31.7420, 118.8620],
+  WUH: [30.7838, 114.2081],
+  XIY: [34.4471, 108.7516],
+  KMG: [25.1018, 102.9291],
+  CSX: [28.1892, 113.2200],
+  XMN: [24.5443, 118.1278],
+  TAO: [36.3497, 120.3744],
+  DLC: [38.9656, 121.5386],
+  TSN: [39.1244, 117.3461],
+  SYX: [18.3029, 109.4122],
+  HAK: [19.9348, 110.4590],
+  FOC: [25.9328, 119.6633],
+  NNG: [22.6083, 108.1725],
+  HRB: [45.6234, 126.2503],
+  SHE: [41.6398, 123.4887],
+  CGO: [34.5197, 113.8411],
+  URC: [43.9071, 87.4742],
+  LHW: [36.5167, 103.6217],
+  TNA: [36.8572, 117.2161],
+  HKG: [22.3080, 113.9185],
+  MFM: [22.1495, 113.5915],
+  TPE: [25.0797, 121.2342],
+  TSA: [25.0697, 121.5520],
+  KHH: [22.5764, 120.3500],
+  NRT: [35.7767, 140.3864],
+  HND: [35.5494, 139.7798],
+  KIX: [34.4320, 135.2300],
+  ITM: [34.7855, 135.4382],
+  NGO: [34.8584, 136.8054],
+  FUK: [33.5859, 130.4507],
+  CTS: [42.7752, 141.6923],
+  OKA: [26.2064, 127.6465],
+  ICN: [37.4602, 126.4407],
+  GMP: [37.5583, 126.7906],
+  PUS: [35.1796, 128.9382],
+  CJU: [33.5113, 126.4930],
+  BKK: [13.6900, 100.7501],
+  DMK: [13.9126, 100.6068],
+  CNX: [18.7708, 98.9628],
+  HKT: [8.1132, 98.3169],
+  KUL: [2.7456, 101.7072],
+  PEN: [5.2971, 100.2769],
+  MNL: [14.5086, 121.0194],
+  CEB: [10.3113, 123.9794],
+  SGN: [10.8188, 106.6519],
+  HAN: [21.2212, 105.8072],
+  DAD: [16.0439, 108.1993],
+  CGK: [-6.1256, 106.6558],
+  DPS: [-8.7481, 115.1672],
+  RGN: [16.9073, 96.1332],
+  PNH: [11.5466, 104.8441],
+  REP: [13.4107, 103.8125],
+  VTE: [17.9883, 102.5633],
+  BWN: [4.9431, 114.9283],
+  DEL: [28.5665, 77.1031],
+  BOM: [19.0896, 72.8656],
+  BLR: [13.1986, 77.7066],
+  MAA: [12.9941, 80.1803],
+  CCU: [22.6547, 88.4467],
+  CMB: [7.1811, 79.8837],
+  DAC: [23.8433, 90.3978],
+  DXB: [25.2532, 55.3657],
+  DOH: [25.2611, 51.5650],
+  AUH: [24.4330, 54.6511],
+  IST: [41.2752, 28.7519],
+  TLV: [32.0055, 34.8854],
+  LHR: [51.4700, -0.4543],
+  LGW: [51.1480, -0.1903],
+  DUB: [53.4213, -6.2701],
+  PRG: [50.1008, 14.2600],
+  WAW: [52.1657, 20.9671],
+  BUD: [47.4298, 19.2611],
+  JFK: [40.6413, -73.7781],
+  EWR: [40.6925, -74.1686],
+  LAX: [33.9416, -118.4085],
+  SFO: [37.6213, -122.3790],
+  ORD: [41.9742, -87.9073],
+  ATL: [33.6407, -84.4277],
+  DFW: [32.8998, -97.0403],
+  SEA: [47.4502, -122.3088],
+  IAD: [38.9531, -77.4565],
+  MIA: [25.7959, -80.2870],
+  BOS: [42.3656, -71.0096],
+  YVR: [49.1967, -123.1815],
+  YYZ: [43.6777, -79.6248],
+  SYD: [-33.9461, 151.1772],
+  MEL: [-37.6690, 144.8410],
+  BNE: [-27.3842, 153.1175],
+  AKL: [-37.0081, 174.7917],
+  JNB: [-26.1392, 28.2460],
+  CAI: [30.1219, 31.4056],
+  ADD: [8.9778, 38.7993],
+  NBO: [-1.3192, 36.9275],
+  GRU: [-23.4356, -46.4731],
+  EZE: [-34.8222, -58.5358],
+  SCL: [-33.3930, -70.7858],
+  BOG: [4.7016, -74.1469],
+  LIM: [-12.0219, -77.1143],
+  MEX: [19.4363, -99.0721],
+  CUN: [21.0365, -86.8771],
+};
+
+const AIRPORT_TZ: Record<string, number> = {
+  SIN: 8, PVG: 8, SHA: 8, PEK: 8, PKX: 8, CAN: 8, SZX: 8, CTU: 8, TFU: 8, CKG: 8,
+  HGH: 8, NKG: 8, WUH: 8, XIY: 8, KMG: 8, CSX: 8, XMN: 8, TAO: 8, DLC: 8, TSN: 8,
+  SYX: 8, HAK: 8, FOC: 8, NNG: 8, HRB: 8, SHE: 8, CGO: 8, TNA: 8, HKG: 8, MFM: 8,
+  TPE: 8, TSA: 8, KHH: 8, MNL: 8, KUL: 8, PEN: 8, BKK: 7, DMK: 7, CNX: 7, HKT: 7,
+  SGN: 7, HAN: 7, DAD: 7, CGK: 7, DPS: 8, RGN: 6.5, PNH: 7, REP: 7, VTE: 7, BWN: 8,
+  ICN: 9, GMP: 9, PUS: 9, CJU: 9, NRT: 9, HND: 9, KIX: 9, ITM: 9, NGO: 9, FUK: 9,
+  CTS: 9, OKA: 9, DXB: 4, AUH: 4, DOH: 3, IST: 3, TLV: 3, LHR: 1, LGW: 1, CDG: 2,
+  FRA: 2, MUC: 2, AMS: 2, FCO: 2, MAD: 2, BCN: 2, ZRH: 2, VIE: 2, HEL: 3, CPH: 2,
+  ARN: 2, OSL: 2, ATH: 3, LIS: 1, DUB: 1, PRG: 2, WAW: 2, BUD: 2, JFK: -4, EWR: -4,
+  LAX: -7, SFO: -7, ORD: -5, ATL: -4, DFW: -5, SEA: -7, IAD: -4, MIA: -4, BOS: -4,
+  YVR: -7, YYZ: -4, SYD: 10, MEL: 10, BNE: 10, AKL: 12, JNB: 2, CAI: 3, ADD: 3,
+  NBO: 3, GRU: -3, EZE: -3, SCL: -4, BOG: -5, LIM: -5, MEX: -6, CUN: -5
+};
+
+const AIRLINES: Record<string, { zh: string; en: string }> = {
+  PR: { zh: "菲律宾航空", en: "Philippine Airlines" },
+  HU: { zh: "海南航空", en: "Hainan Airlines" },
+  TR: { zh: "酷航", en: "Scoot" },
+  UA: { zh: "联合航空", en: "United Airlines" },
+  SQ: { zh: "新加坡航空", en: "Singapore Airlines" },
+  CX: { zh: "国泰航空", en: "Cathay Pacific" },
+  MU: { zh: "中国东方航空", en: "China Eastern Airlines" },
+  CZ: { zh: "中国南方航空", en: "China Southern Airlines" },
+  CA: { zh: "中国国际航空", en: "Air China" },
+  MF: { zh: "厦门航空", en: "Xiamen Air" },
+  BR: { zh: "长荣航空", en: "EVA Air" },
+  CI: { zh: "中华航空", en: "China Airlines" },
+  KE: { zh: "大韩航空", en: "Korean Air" },
+  OZ: { zh: "韩亚航空", en: "Asiana Airlines" },
+  JL: { zh: "日本航空", en: "Japan Airlines" },
+  NH: { zh: "全日空", en: "All Nippon Airways" },
+  MH: { zh: "马来西亚航空", en: "Malaysia Airlines" },
+  TG: { zh: "泰国航空", en: "Thai Airways" },
+  VN: { zh: "越南航空", en: "Vietnam Airlines" },
+  EK: { zh: "阿联酋航空", en: "Emirates" },
+  QR: { zh: "卡塔尔航空", en: "Qatar Airways" },
+  EY: { zh: "阿提哈德航空", en: "Etihad Airways" },
+  TK: { zh: "土耳其航空", en: "Turkish Airlines" },
+  LH: { zh: "汉莎航空", en: "Lufthansa" },
+  AF: { zh: "法国航空", en: "Air France" },
+  KL: { zh: "荷兰皇家航空", en: "KLM Royal Dutch Airlines" },
+  BA: { zh: "英国航空", en: "British Airways" },
+};
+
+const TERMINALS: Record<string, string> = {
+  LAX: "TB", MNL: "T1", XMN: "T3", SIN: "T3", PVG: "T2", PEK: "T3", SZX: "T3", CAN: "T2",
+  HKG: "T1", TPE: "T2", NRT: "T2", HND: "T3", KIX: "T1", ICN: "T1", BKK: "T1", KUL: "T1",
+  DXB: "T3", DOH: "T1", LHR: "T2", CDG: "T2E", FRA: "T1", JFK: "T4", SFO: "TI"
+};
+
+function getDistance(p1: [number, number], p2: [number, number]): number {
+  const R = 6371; // km
+  const dLat = ((p2[0] - p1[0]) * Math.PI) / 180;
+  const dLon = ((p2[1] - p1[1]) * Math.PI) / 180;
+  const lat1 = (p1[0] * Math.PI) / 180;
+  const lat2 = (p2[0] * Math.PI) / 180;
+
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
+
+export function getAirportTzOffset(code: string): number {
+  const key = code.toUpperCase();
+  if (key in AIRPORT_TZ) return AIRPORT_TZ[key];
+  const coord = COORDS[key];
+  if (coord) return Math.round(coord[1] / 15);
+  return 8;
+}
+
+function toLocalIsoString(utcMs: number, tzOffset: number): string {
+  const localDate = new Date(utcMs + tzOffset * 3600000);
+  const y = localDate.getUTCFullYear();
+  const m = String(localDate.getUTCMonth() + 1).padStart(2, "0");
+  const d = String(localDate.getUTCDate()).padStart(2, "0");
+  const hh = String(localDate.getUTCHours()).padStart(2, "0");
+  const mm = String(localDate.getUTCMinutes()).padStart(2, "0");
+  const ss = String(localDate.getUTCSeconds()).padStart(2, "0");
+  return `${y}-${m}-${d}T${hh}:${mm}:${ss}`;
+}
+
+export interface DetailedSegment {
+  type: "flight" | "layover";
+  origin?: string;
+  dest?: string;
+  departTime?: string;
+  departDate?: string;
+  departWeekday?: string;
+  arriveTime?: string;
+  arriveDate?: string;
+  arriveDateLabel?: string;
+  duration?: string;
+  carrier?: string;
+  carrierCode?: string;
+  flightNumber?: string;
+  cabin?: string;
+  aircraft?: string;
+  meals?: string;
+  terminal?: string;
+  city?: string;
+  airportCode?: string;
+  layoverDuration?: string;
+  warnings?: string[];
+}
+
+function formatDurationMinutes(minutes: number, isEn: boolean): string {
+  const h = Math.floor(minutes / 60);
+  const m = minutes % 60;
+  if (isEn) {
+    if (h === 0) return `${m}m`;
+    return `${h}h ${m}m`;
+  } else {
+    if (h === 0) return `${m}分`;
+    return `${h}时${m}分`;
+  }
+}
+
+function formatDateAndWeekday(isoStr: string, isEn: boolean): { dateLabel: string; weekdayLabel: string } {
+  const dateStr = isoStr.split("T")[0];
+  const dateObj = new Date(dateStr);
+  const m = dateObj.getMonth();
+  const d = dateObj.getDate();
+  const w = dateObj.getDay();
+
+  const monthsZh = ["10月", "11月", "12月", "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月"]; // Wait, month index: 0 is Jan
+  const realMonthsZh = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
+  const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  const weekdaysZh = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
+  const weekdaysEn = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  if (isEn) {
+    return {
+      dateLabel: `${monthsEn[m]} ${d}`,
+      weekdayLabel: weekdaysEn[w],
+    };
+  } else {
+    return {
+      dateLabel: `${realMonthsZh[m]}${d}日`,
+      weekdayLabel: weekdaysZh[w],
+    };
+  }
+}
+
+export function generateItinerary(op: any, isEn: boolean): DetailedSegment[] {
+  const d = op.detail || {};
+  const origin = op.origin;
+  const dest = op.dest;
+  const layoverCities = op.layover_cities || [];
+  const stops = d.stops || layoverCities.length;
+  const carrierCode = (d.carrier || "PR").toUpperCase();
+  
+  // Use user's selected cabin if available, else parse from label
+  let cabinLabel = isEn ? "Economy" : "经济舱";
+  if (op.explain?.headline) {
+    if (op.explain.headline.includes("商务") || op.explain.headline.includes("Business")) {
+      cabinLabel = isEn ? "Business Class" : "商务舱";
+    } else if (op.explain.headline.includes("头等") || op.explain.headline.includes("First")) {
+      cabinLabel = isEn ? "First Class" : "头等舱";
+    } else if (op.explain.headline.includes("超级经济") || op.explain.headline.includes("Premium")) {
+      cabinLabel = isEn ? "Premium Economy" : "超级经济舱";
+    }
+  }
+
+  const mealsLabel = isEn ? "Meals provided" : "有餐食";
+
+  const airlineInfo = AIRLINES[carrierCode] || { zh: carrierCode, en: carrierCode };
+  const carrierName = isEn ? airlineInfo.en : airlineInfo.zh;
+
+  const departTimeStr = d.depart_time;
+  const arriveTimeStr = d.arrive_time;
+
+  if (!departTimeStr || !arriveTimeStr) {
+    return [
+      {
+        type: "flight",
+        origin,
+        dest,
+        departTime: "00:00",
+        departDate: op.depart_date || "",
+        departWeekday: "",
+        arriveTime: "12:00",
+        arriveDate: op.depart_date || "",
+        duration: "12h 00m",
+        carrier: carrierName,
+        carrierCode,
+        flightNumber: `${carrierCode}001`,
+        cabin: cabinLabel,
+        aircraft: "Boeing 777",
+        meals: mealsLabel,
+        terminal: TERMINALS[origin] || "T1"
+      }
+    ];
+  }
+
+  const depDateObj = new Date(departTimeStr);
+  const arrDateObj = new Date(arriveTimeStr);
+  const totalMinutes = Math.round((arrDateObj.getTime() - depDateObj.getTime()) / 60000);
+
+  // If non-stop
+  if (stops === 0 || layoverCities.length === 0) {
+    const depLocalIso = toLocalIsoString(depDateObj.getTime(), getAirportTzOffset(origin));
+    const arrLocalIso = toLocalIsoString(arrDateObj.getTime(), getAirportTzOffset(dest));
+    const dt = formatDateAndWeekday(depLocalIso, isEn);
+    const at = formatDateAndWeekday(arrLocalIso, isEn);
+
+    const depDateOnly = depLocalIso.split("T")[0];
+    const arrDateOnly = arrLocalIso.split("T")[0];
+    const hasDateDiff = depDateOnly !== arrDateOnly;
+
+    return [
+      {
+        type: "flight",
+        origin,
+        dest,
+        departTime: depLocalIso.split("T")[1].substring(0, 5),
+        departDate: dt.dateLabel,
+        departWeekday: dt.weekdayLabel,
+        arriveTime: arrLocalIso.split("T")[1].substring(0, 5),
+        arriveDate: at.dateLabel,
+        arriveDateLabel: hasDateDiff ? at.dateLabel : undefined,
+        duration: formatDurationMinutes(totalMinutes, isEn),
+        carrier: carrierName,
+        carrierCode,
+        flightNumber: `${carrierCode}101`,
+        cabin: cabinLabel,
+        aircraft: "Boeing 777-300",
+        meals: mealsLabel,
+        terminal: TERMINALS[origin] || "T1"
+      }
+    ];
+  }
+
+  // 1 layover
+  if (stops === 1 && layoverCities.length === 1) {
+    const L1 = layoverCities[0];
+    const layoverMinutes = totalMinutes >= 300 ? 100 : 65; // 1h40m or 1h5m
+    const flightMinutes = totalMinutes - layoverMinutes;
+
+    const p_orig = COORDS[origin] || [33.9416, -118.4085];
+    const p_l1 = COORDS[L1] || [14.5086, 121.0194];
+    const p_dest = COORDS[dest] || [24.5443, 118.1278];
+
+    const d1 = getDistance(p_orig, p_l1);
+    const d2 = getDistance(p_l1, p_dest);
+    const totalDist = d1 + d2;
+    const r1 = totalDist > 0 ? d1 / totalDist : 0.8;
+
+    const f1Min = Math.round(flightMinutes * r1);
+    const f2Min = flightMinutes - f1Min;
+
+    const f1DepUtc = depDateObj.getTime();
+    const f1ArrUtc = f1DepUtc + f1Min * 60000;
+    const f2DepUtc = f1ArrUtc + layoverMinutes * 60000;
+    const f2ArrUtc = arrDateObj.getTime();
+
+    const seg1DepLocal = toLocalIsoString(f1DepUtc, getAirportTzOffset(origin));
+    const seg1ArrLocal = toLocalIsoString(f1ArrUtc, getAirportTzOffset(L1));
+    const seg2DepLocal = toLocalIsoString(f2DepUtc, getAirportTzOffset(L1));
+    const seg2ArrLocal = toLocalIsoString(f2ArrUtc, getAirportTzOffset(dest));
+
+    const dt1 = formatDateAndWeekday(seg1DepLocal, isEn);
+    const at1 = formatDateAndWeekday(seg1ArrLocal, isEn);
+    const dt2 = formatDateAndWeekday(seg2DepLocal, isEn);
+    const at2 = formatDateAndWeekday(seg2ArrLocal, isEn);
+
+    const hasDateDiff1 = seg1DepLocal.split("T")[0] !== seg1ArrLocal.split("T")[0];
+    const hasDateDiff2 = seg2DepLocal.split("T")[0] !== seg2ArrLocal.split("T")[0];
+
+    const aircraft1 = f1Min > 360 ? "波音777-300" : "空客A321";
+    const aircraft2 = f2Min > 360 ? "波音777-300" : "空客A321";
+    const enAircraft1 = f1Min > 360 ? "Boeing 777-300" : "Airbus A321";
+    const enAircraft2 = f2Min > 360 ? "Boeing 777-300" : "Airbus A321";
+
+    const warnings: string[] = [];
+    if (op.bag_recheck) {
+      warnings.push(isEn ? "Transit Visa Alert" : "过境签提醒");
+      warnings.push(isEn ? "Baggage recheck required" : "行李非直挂");
+    } else {
+      warnings.push(isEn ? "Baggage checked through" : "行李直达");
+    }
+    if (layoverMinutes < 120) {
+      warnings.push(isEn ? "Short transfer time" : "中转时间短");
+    }
+
+    return [
+      {
+        type: "flight",
+        origin,
+        dest: L1,
+        departTime: seg1DepLocal.split("T")[1].substring(0, 5),
+        departDate: dt1.dateLabel,
+        departWeekday: dt1.weekdayLabel,
+        arriveTime: seg1ArrLocal.split("T")[1].substring(0, 5),
+        arriveDate: at1.dateLabel,
+        arriveDateLabel: hasDateDiff1 ? at1.dateLabel : undefined,
+        duration: formatDurationMinutes(f1Min, isEn),
+        carrier: carrierName,
+        carrierCode,
+        flightNumber: `${carrierCode}103`,
+        cabin: cabinLabel,
+        aircraft: isEn ? enAircraft1 : aircraft1,
+        meals: mealsLabel,
+        terminal: TERMINALS[origin] || "T1"
+      },
+      {
+        type: "layover",
+        city: getAirport(L1)?.city || L1,
+        airportCode: L1,
+        layoverDuration: formatDurationMinutes(layoverMinutes, isEn),
+        warnings
+      },
+      {
+        type: "flight",
+        origin: L1,
+        dest,
+        departTime: seg2DepLocal.split("T")[1].substring(0, 5),
+        departDate: dt2.dateLabel,
+        departWeekday: dt2.weekdayLabel,
+        arriveTime: seg2ArrLocal.split("T")[1].substring(0, 5),
+        arriveDate: at2.dateLabel,
+        arriveDateLabel: hasDateDiff2 ? at2.dateLabel : undefined,
+        duration: formatDurationMinutes(f2Min, isEn),
+        carrier: carrierName,
+        carrierCode,
+        flightNumber: `${carrierCode}334`,
+        cabin: cabinLabel,
+        aircraft: isEn ? enAircraft2 : aircraft2,
+        meals: mealsLabel,
+        terminal: TERMINALS[L1] || "T1"
+      }
+    ];
+  }
+
+  // 2+ layovers fallback
+  const segs: DetailedSegment[] = [];
+  let currentUtc = depDateObj.getTime();
+  const segmentsCount = stops + 1;
+  const segmentMinutes = Math.floor((totalMinutes - stops * 100) / segmentsCount);
+
+  for (let i = 0; i < segmentsCount; i++) {
+    const fromCode = i === 0 ? origin : layoverCities[i - 1];
+    const toCode = i === segmentsCount - 1 ? dest : layoverCities[i];
+
+    const fDepLocal = toLocalIsoString(currentUtc, getAirportTzOffset(fromCode));
+    currentUtc += segmentMinutes * 60000;
+    const fArrLocal = toLocalIsoString(currentUtc, getAirportTzOffset(toCode));
+
+    const dt = formatDateAndWeekday(fDepLocal, isEn);
+    const at = formatDateAndWeekday(fArrLocal, isEn);
+    const hasDateDiff = fDepLocal.split("T")[0] !== fArrLocal.split("T")[0];
+
+    const aircraft = segmentMinutes > 360 ? "波音787" : "空客A320";
+    const enAircraft = segmentMinutes > 360 ? "Boeing 787" : "Airbus A320";
+
+    segs.push({
+      type: "flight",
+      origin: fromCode,
+      dest: toCode,
+      departTime: fDepLocal.split("T")[1].substring(0, 5),
+      departDate: dt.dateLabel,
+      departWeekday: dt.weekdayLabel,
+      arriveTime: fArrLocal.split("T")[1].substring(0, 5),
+      arriveDate: at.dateLabel,
+      arriveDateLabel: hasDateDiff ? at.dateLabel : undefined,
+      duration: formatDurationMinutes(segmentMinutes, isEn),
+      carrier: carrierName,
+      carrierCode,
+      flightNumber: `${carrierCode}${100 + i * 50}`,
+      cabin: cabinLabel,
+      aircraft: isEn ? enAircraft : aircraft,
+      meals: mealsLabel,
+      terminal: TERMINALS[fromCode] || "T1"
+    });
+
+    if (i < stops) {
+      const layCode = layoverCities[i];
+      segs.push({
+        type: "layover",
+        city: getAirport(layCode)?.city || layCode,
+        airportCode: layCode,
+        layoverDuration: "1h 40m",
+        warnings: [isEn ? "Baggage direct" : "行李直达"]
+      });
+      currentUtc += 100 * 60000;
+    }
+  }
+
+  return segs;
+}
+
