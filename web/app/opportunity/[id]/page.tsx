@@ -10,12 +10,14 @@ import { PriceLevelBadge } from "@/components/price-level-badge";
 import { PriceMeter } from "@/components/price-meter";
 import { RecommendationStars } from "@/components/recommendation-stars";
 import { RiskBadges } from "@/components/risk-badges";
+import { RouteLabel } from "@/components/route-label";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
 import { RISK_TAG_LABELS, RISK_TAG_TERMS, TYPE_TONE, oppMeta } from "@/lib/constants";
 import { fmtPrice, stopsLabel, weekday } from "@/lib/format";
+import { formatAirport } from "@/lib/airports";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 
@@ -88,9 +90,7 @@ export default function OpportunityDetailPage() {
           <Tooltip label={meta.en}>
             <Badge tone={TYPE_TONE[op.type] ?? "muted"}>{meta.zh}</Badge>
           </Tooltip>
-          <h1 className="text-2xl font-semibold tracking-tight">
-            {op.origin} → {op.dest}
-          </h1>
+          <RouteLabel origin={op.origin} dest={op.dest} size="lg" />
           <p className="text-sm text-muted-foreground">
             出发 {op.depart_date} {weekday(op.depart_date)}
             {op.return_date && ` · 返回 ${op.return_date}`}
@@ -137,7 +137,7 @@ export default function OpportunityDetailPage() {
             <CardTitle>航班信息</CardTitle>
           </CardHeader>
           <CardContent className="flex flex-col gap-2 text-sm">
-            <Field label="航线" value={`${op.origin} → ${op.dest}`} />
+            <Field label="航线" value={`${formatAirport(op.origin)} → ${formatAirport(op.dest)}`} />
             <Field
               label="出发日"
               value={`${op.depart_date ?? "—"} ${weekday(op.depart_date)}`}

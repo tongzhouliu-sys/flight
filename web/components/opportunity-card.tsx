@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, Plane } from "lucide-react";
+import { ChevronRight } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
@@ -8,6 +8,7 @@ import { Money } from "@/components/money";
 import { PriceLevelBadge } from "@/components/price-level-badge";
 import { RecommendationStars } from "@/components/recommendation-stars";
 import { RiskBadges } from "@/components/risk-badges";
+import { RouteLabel } from "@/components/route-label";
 import { TYPE_TONE, oppMeta } from "@/lib/constants";
 import { fmtPrice, weekday } from "@/lib/format";
 import {
@@ -46,10 +47,7 @@ export function OpportunityCard({
 
           {/* 航线 + 日期 */}
           <p className="flex items-center gap-1.5 text-sm text-muted-foreground">
-            <Plane className="h-3.5 w-3.5" />
-            <span className="font-medium text-foreground">
-              {op.origin} → {op.dest}
-            </span>
+            <RouteLabel origin={op.origin} dest={op.dest} />
             {op.depart_date && (
               <span>
                 · {op.depart_date} {weekday(op.depart_date)}

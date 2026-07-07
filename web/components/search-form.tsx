@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
+import { AirportCombobox } from "@/components/airport-combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -111,24 +112,20 @@ export function SearchForm({
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
               <Label htmlFor="origin">出发机场</Label>
-              <Input
+              <AirportCombobox
                 id="origin"
-                placeholder="如 SIN"
-                maxLength={3}
                 value={form.origin}
-                onChange={(e) => set("origin", e.target.value.toUpperCase())}
-                className="uppercase"
+                onChange={(v) => set("origin", v)}
+                placeholder="输入城市或机场代码，如 SIN"
               />
             </div>
             <div>
               <Label htmlFor="dest">到达机场</Label>
-              <Input
+              <AirportCombobox
                 id="dest"
-                placeholder="如 HKG"
-                maxLength={3}
                 value={form.dest}
-                onChange={(e) => set("dest", e.target.value.toUpperCase())}
-                className="uppercase"
+                onChange={(v) => set("dest", v)}
+                placeholder="输入城市或机场代码，如 HKG"
               />
             </div>
           </div>

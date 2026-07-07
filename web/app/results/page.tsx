@@ -4,6 +4,7 @@ import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles } from "lucide-react";
 import { OpportunityCard } from "@/components/opportunity-card";
+import { RouteLabel } from "@/components/route-label";
 import { PriceChart } from "@/components/price-chart";
 import { ResultsTable } from "@/components/results-table";
 import { EmptyState, ErrorState, Loading } from "@/components/states";
@@ -75,9 +76,7 @@ export default function ResultsPage() {
         </button>
         <div className="flex flex-wrap items-end justify-between gap-3">
           <div>
-            <h1 className="text-2xl font-semibold tracking-tight">
-              {query.origin} → {query.dest}
-            </h1>
+            <RouteLabel origin={query.origin} dest={query.dest} size="lg" />
             <p className="mt-1 text-sm text-muted-foreground">
               {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"}{" "}
               · {query.adults} 人 · 采样 {meta.point_count} 天

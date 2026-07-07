@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { MapPin, Sparkles, Star, TrendingDown } from "lucide-react";
 import { SearchForm } from "@/components/search-form";
 import { api } from "@/lib/api";
+import { airportCity } from "@/lib/airports";
 import { useSearchStore } from "@/store/search";
 import type { RouteInfo, SearchParams } from "@/types";
 
@@ -80,7 +81,19 @@ export default function Home() {
                 className="inline-flex items-center gap-1.5 rounded-full border border-border bg-card px-3 py-1 text-sm transition-colors hover:border-primary/30 hover:bg-muted"
               >
                 <span className="font-medium">
-                  {r.origin} → {r.dest}
+                  {r.origin}
+                  {airportCity(r.origin) && (
+                    <span className="ml-0.5 font-normal text-muted-foreground text-xs">
+                      {airportCity(r.origin)}
+                    </span>
+                  )}
+                  {" → "}
+                  {r.dest}
+                  {airportCity(r.dest) && (
+                    <span className="ml-0.5 font-normal text-muted-foreground text-xs">
+                      {airportCity(r.dest)}
+                    </span>
+                  )}
                 </span>
                 <span className="rounded bg-muted px-1.5 py-px text-[11px] text-muted-foreground">
                   {r.tier}
