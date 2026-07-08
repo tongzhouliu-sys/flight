@@ -696,8 +696,27 @@ function formatDateAndWeekday(isoStr: string, isEn: boolean): { dateLabel: strin
   }
 }
 
+interface OppDetail {
+  percentile_now?: number | null;
+  window_low?: number | null;
+  low_confidence?: boolean;
+  p10?: number | null;
+  p15?: number | null;
+  p50?: number | null;
+  carrier?: string | null;
+  stops?: number | null;
+  trigger?: string;
+  best_date?: string;
+  center_date?: string;
+  variant?: string;
+  adder_sgd?: number;
+  shadow_price?: number;
+  depart_time?: string | null;
+  arrive_time?: string | null;
+}
+
 export function generateItinerary(op: Opportunity, isEn: boolean): DetailedSegment[] {
-  const d = op.detail || {};
+  const d = (op.detail || {}) as OppDetail;
   const origin = op.origin;
   const dest = op.dest;
   const layoverCities = op.layover_cities || [];
