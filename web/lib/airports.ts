@@ -152,6 +152,7 @@ const AIRPORTS: AirportInfo[] = [
   { code: "SYD", name: "金斯福德·史密斯国际机场", city: "悉尼", cityEn: "Sydney", pinyin: "jinsifude·shimisiguojijichang xini jsfd·smsgjjc xn" },
   { code: "MEL", name: "墨尔本机场", city: "墨尔本", cityEn: "Melbourne", pinyin: "moerbenjichang moerben mebjc meb" },
   { code: "BNE", name: "布里斯班机场", city: "布里斯班", cityEn: "Brisbane", pinyin: "bulisibanjichang bulisiban blsbjc blsb" },
+  { code: "CNS", name: "凯恩斯机场", city: "凯恩斯", cityEn: "Cairns", pinyin: "kaiensijichang kaiensi kesjc kes" },
   { code: "AKL", name: "奥克兰机场", city: "奥克兰", cityEn: "Auckland", pinyin: "aokelanjichang aokelan akljc akl" },
 
   // ── 非洲 ──

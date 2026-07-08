@@ -221,6 +221,7 @@ const AIRPORT_COUNTRIES: Record<string, { country: string; visaInfo: string; tra
   },
   MEL: { country: "澳大利亚", visaInfo: "🇦🇺 经澳大利亚转机必须持有澳大利亚过境签证（771类）。", transitInfo: "墨尔本机场转机同理，必须持有有效的过境或旅游签证。" },
   BNE: { country: "澳大利亚", visaInfo: "🇦🇺 经澳大利亚转机必须持有澳大利亚过境签证（771类）。", transitInfo: "布里斯班机场转机同理，必须持有有效的过境或旅游签证。" },
+  CNS: { country: "澳大利亚", visaInfo: "🇦🇺 经澳大利亚转机必须持有澳大利亚过境签证（771类）。", transitInfo: "凯恩斯机场转机同理，必须持有有效的过境或旅游签证。" },
   AKL: {
     country: "新西兰",
     visaInfo: "🇳🇿 持中国普通护照经新西兰机场前往第三国，需要申请过境签证（Transit Visa），除非持有澳大利亚有效签证等特定豁免件。",
@@ -370,7 +371,7 @@ export function getFaqAndRemarks(
       q: `经 ${layoverCities.join("/")} 转机，中国护照需要办理过境签证吗？`,
       a: transitAnswer,
       type: "visa",
-      warning: bagRecheck || layoverCities.some(code => ["JFK", "EWR", "LAX", "SFO", "ORD", "ATL", "DFW", "SEA", "IAD", "MIA", "BOS", "SYD", "MEL", "BNE", "AKL"].includes(code.toUpperCase())),
+      warning: bagRecheck || layoverCities.some(code => ["JFK", "EWR", "LAX", "SFO", "ORD", "ATL", "DFW", "SEA", "IAD", "MIA", "BOS", "SYD", "MEL", "BNE", "CNS", "AKL"].includes(code.toUpperCase())),
     });
   }
 
@@ -537,6 +538,7 @@ const COORDS: Record<string, [number, number]> = {
   SYD: [-33.9461, 151.1772],
   MEL: [-37.6690, 144.8410],
   BNE: [-27.3842, 153.1175],
+  CNS: [-16.8858, 145.7554],
   AKL: [-37.0081, 174.7917],
   JNB: [-26.1392, 28.2460],
   CAI: [30.1219, 31.4056],
@@ -562,7 +564,7 @@ const AIRPORT_TZ: Record<string, number> = {
   FRA: 2, MUC: 2, AMS: 2, FCO: 2, MAD: 2, BCN: 2, ZRH: 2, VIE: 2, HEL: 3, CPH: 2,
   ARN: 2, OSL: 2, ATH: 3, LIS: 1, DUB: 1, PRG: 2, WAW: 2, BUD: 2, JFK: -4, EWR: -4,
   LAX: -7, SFO: -7, ORD: -5, ATL: -4, DFW: -5, SEA: -7, IAD: -4, MIA: -4, BOS: -4,
-  YVR: -7, YYZ: -4, SYD: 10, MEL: 10, BNE: 10, AKL: 12, JNB: 2, CAI: 3, ADD: 3,
+  YVR: -7, YYZ: -4, SYD: 10, MEL: 10, BNE: 10, CNS: 10, AKL: 12, JNB: 2, CAI: 3, ADD: 3,
   NBO: 3, GRU: -3, EZE: -3, SCL: -4, BOG: -5, LIM: -5, MEX: -6, CUN: -5
 };
 
