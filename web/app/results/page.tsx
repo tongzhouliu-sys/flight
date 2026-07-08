@@ -398,28 +398,31 @@ export default function ResultsPage() {
 
   return (
     <div className="flex flex-col gap-6 w-full gradient-bg min-h-screen">
-      {/* 头部航线概要与筛选栏 */}
-      <div className="flex flex-col gap-5">
-        <section className="flex items-center justify-between gap-2 p-1 shrink-0">
-          <div>
-            <RouteLabel origin={query.origin} dest={query.dest} size="lg" />
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"} · {query.adults}{" "}
-              人 · 采样 {meta.point_count} 天
-              {meta.cached && " · 缓存"}
-            </p>
-          </div>
-          <button
-            type="button"
-            onClick={() => router.push("/")}
-            className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground border border-border bg-card px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-muted cursor-pointer"
-          >
-            <ArrowLeft className="h-3.5 w-3.5" /> 新搜索
-          </button>
-        </section>
+      {/* 头部航线概要 */}
+      <section className="flex items-center justify-between gap-2 p-1 shrink-0">
+        <div>
+          <RouteLabel origin={query.origin} dest={query.dest} size="lg" />
+          <p className="mt-0.5 text-xs text-muted-foreground">
+            {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"} · {query.adults}{" "}
+            人 · 采样 {meta.point_count} 天
+            {meta.cached && " · 缓存"}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => router.push("/")}
+          className="flex items-center gap-1 text-xs text-muted-foreground transition-colors hover:text-foreground border border-border bg-card px-2.5 py-1.5 rounded-lg shadow-sm hover:bg-muted cursor-pointer"
+        >
+          <ArrowLeft className="h-3.5 w-3.5" /> 新搜索
+        </button>
+      </section>
 
-        {/* 筛选控制器卡片 */}
-        <Card className="w-full shadow-sm border-border/80">
+      {/* 两栏式卡片布局 */}
+      <div className="flex flex-col md:grid md:grid-cols-12 gap-7 items-start w-full">
+        {/* 左侧栏：筛选面板、价格日历 */}
+        <div className="flex flex-col gap-6 md:col-span-6 w-full">
+          {/* 筛选控制器卡片 */}
+          <Card className="w-full shadow-sm border-border/80">
           <CardContent className="p-4 flex flex-col gap-3">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex flex-wrap items-center gap-2">
@@ -694,13 +697,32 @@ export default function ResultsPage() {
               </div>
             )}
           </CardContent>
-        </Card>
-      </div>
+          </Card>
 
-      {/* 两栏式卡片布局 */}
-      <div className="flex flex-col md:grid md:grid-cols-12 gap-7 items-start w-full">
-        {/* 左侧栏：快速结论、省钱机会 */}
-        <div className="flex flex-col gap-6 md:col-span-5 w-full">
+          {/* 价格日历 */}
+          <section className="flex flex-col gap-3">
+            <SectionTitle showLine>
+              📅 价格日历
+              <span className="ml-2 text-xs font-normal text-muted-foreground/70 bg-muted/40 px-2 py-0.5 rounded-full">
+                {displayResults.length} 天
+              </span>
+            </SectionTitle>
+            <Card className="shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400/50 via-primary/30 to-transparent" />
+              <CardContent className="p-0">
+                <PriceCalendar
+                  results={displayResults}
+                  currency={cur}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                />
+              </CardContent>
+            </Card>
+          </section>
+        </div>
+
+        {/* 右侧栏：快速结论、价格趋势、航班详情、省钱机会 */}
+        <div className="flex flex-col gap-6 md:col-span-6 w-full">
           {/* 快速结论：5 秒回答三问 */}
           <Card className="overflow-hidden border-primary/15 shadow-sm shrink-0 relative">
             {/* 顶部装饰渐变条 */}
@@ -771,6 +793,27 @@ export default function ResultsPage() {
               />
             </CardContent>
           </Card>
+
+          {/* 价格趋势 */}
+          {displayResults.length > 1 && (
+            <section className="shrink-0 flex flex-col gap-3">
+              <SectionTitle showLine>📈 价格趋势</SectionTitle>
+              <Card className="shadow-sm overflow-hidden relative">
+                {/* 顶部装饰 */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/50 via-info/30 to-transparent" />
+                <CardContent className="p-4 bg-gradient-to-br from-card via-card to-primary/[0.02]">
+                  <div className="h-60 md:h-72 relative">
+                    <PriceChart 
+                      results={displayResults} 
+                      currency={cur} 
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
 
           {/* 航班详情（所选日期） */}
           <section className="flex flex-col gap-3">
@@ -952,51 +995,6 @@ export default function ResultsPage() {
                 </div>
               )}
             </div>
-          </section>
-        </div>
-
-        {/* 右侧栏：价格趋势、全部日期表格 */}
-        <div className="flex flex-col gap-6 md:col-span-7 w-full">
-          {/* 价格趋势 */}
-          {displayResults.length > 1 && (
-            <section className="shrink-0 flex flex-col gap-3">
-              <SectionTitle showLine>📈 价格趋势</SectionTitle>
-              <Card className="shadow-sm overflow-hidden relative">
-                {/* 顶部装饰 */}
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/50 via-info/30 to-transparent" />
-                <CardContent className="p-4 bg-gradient-to-br from-card via-card to-primary/[0.02]">
-                  <div className="h-60 md:h-72 relative">
-                    <PriceChart 
-                      results={displayResults} 
-                      currency={cur} 
-                      selectedDate={selectedDate}
-                      onSelectDate={setSelectedDate}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-          )}
-
-          {/* 价格日历 */}
-          <section className="flex flex-col gap-3">
-            <SectionTitle showLine>
-              📅 价格日历
-              <span className="ml-2 text-xs font-normal text-muted-foreground/70 bg-muted/40 px-2 py-0.5 rounded-full">
-                {displayResults.length} 天
-              </span>
-            </SectionTitle>
-            <Card className="shadow-sm overflow-hidden relative">
-              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400/50 via-primary/30 to-transparent" />
-              <CardContent className="p-0">
-                <PriceCalendar
-                  results={displayResults}
-                  currency={cur}
-                  selectedDate={selectedDate}
-                  onSelectDate={setSelectedDate}
-                />
-              </CardContent>
-            </Card>
           </section>
         </div>
       </div>
