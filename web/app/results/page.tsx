@@ -81,7 +81,7 @@ export default function ResultsPage() {
     useCurrencyStore.getState().fetchRate();
   }, [hydrate]);
 
-  // 默认选中最低价格 of the 日期
+  // 默认选中最低价格的日期
   useEffect(() => {
     if (!response) return;
     const results = response.results;
@@ -397,9 +397,9 @@ export default function ResultsPage() {
   const hasAnyActiveFilter = activeTags.length > 0;
 
   return (
-    <div className="flex flex-col gap-5 w-full">
+    <div className="flex flex-col gap-6 w-full gradient-bg min-h-screen">
       {/* 头部航线概要与筛选栏 */}
-      <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-5">
         <section className="flex items-center justify-between gap-2 p-1 shrink-0">
           <div>
             <RouteLabel origin={query.origin} dest={query.dest} size="lg" />
@@ -698,23 +698,25 @@ export default function ResultsPage() {
       </div>
 
       {/* 两栏式卡片布局 */}
-      <div className="flex flex-col md:grid md:grid-cols-12 gap-6 items-start w-full">
+      <div className="flex flex-col md:grid md:grid-cols-12 gap-7 items-start w-full">
         {/* 左侧栏：快速结论、省钱机会 */}
-        <div className="flex flex-col gap-5 md:col-span-5 w-full">
+        <div className="flex flex-col gap-6 md:col-span-5 w-full">
           {/* 快速结论：5 秒回答三问 */}
-          <Card className="overflow-hidden border-primary/10 shadow-sm shrink-0">
-            <CardContent className="grid gap-4 p-4 grid-cols-3 divide-x divide-border/80 bg-gradient-to-br from-card via-card to-primary/5">
+          <Card className="overflow-hidden border-primary/15 shadow-sm shrink-0 relative">
+            {/* 顶部装饰渐变条 */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/60 via-info/40 to-good/50" />
+            <CardContent className="grid gap-4 p-5 grid-cols-3 bg-gradient-to-br from-card via-card to-primary/[0.03]">
               <Verdict
-                q="现在买贵不贵？"
+                q="💰 现在买贵不贵？"
                 main={
                   cheapest != null ? (
                     <Money
                       value={cheapest}
                       currency={cur}
-                      className="text-lg font-bold tracking-tight"
+                      className="text-xl font-bold tracking-tight gradient-text"
                     />
                   ) : (
-                    "—"
+                    <span className="text-lg text-muted-foreground">—</span>
                   )
                 }
                 extra={
@@ -727,9 +729,11 @@ export default function ResultsPage() {
                   ) : null
                 }
               />
+              {/* 渐变分隔线 */}
+              <div className="verdict-divider w-px" />
               <Verdict
-                q="有没有更便宜？"
-                className="pl-3"
+                q="✨ 有没有更便宜？"
+                className="pl-4"
                 main={
                   top ? (
                     <span className="tnum text-lg font-bold tracking-tight text-good">
@@ -747,9 +751,11 @@ export default function ResultsPage() {
                   </span>
                 }
               />
+              {/* 渐变分隔线 */}
+              <div className="verdict-divider w-px" />
               <Verdict
-                q="推荐买吗？"
-                className="pl-3"
+                q="🎯 推荐买吗？"
+                className="pl-4"
                 main={
                   top ? (
                     <RecommendationStars count={top.stars} action={top.action} />
@@ -767,9 +773,12 @@ export default function ResultsPage() {
           </Card>
 
           {/* 航班详情（所选日期） */}
-          <section className="flex flex-col gap-2">
-            <SectionTitle icon={<Plane className="h-4 w-4 text-primary" />}>
-              所选日期航班详情 ({selectedDate})
+          <section className="flex flex-col gap-3">
+            <SectionTitle icon={<Plane className="h-4 w-4 text-primary" />} showLine>
+              所选日期航班详情
+              <span className="ml-2 text-xs font-normal text-primary/70 bg-primary/[0.06] px-2 py-0.5 rounded-full">
+                {selectedDate}
+              </span>
             </SectionTitle>
             
             {detailLoading ? (
@@ -802,14 +811,17 @@ export default function ResultsPage() {
                 </CardContent>
               </Card>
             ) : selectedDateDetail ? (
-              <Card className="border border-border/85 shadow-sm flex flex-col overflow-hidden">
-                <CardContent className="p-4 flex flex-col gap-4">
+              <Card className="border border-border/60 shadow-sm flex flex-col overflow-hidden relative">
+                {/* 顶部装饰 */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/40 via-info/30 to-transparent" />
+                <CardContent className="p-5 flex flex-col gap-4">
                   {/* Header info */}
-                  <div className="flex items-center justify-between pb-2 border-b border-border/40 text-xs text-muted-foreground font-semibold">
-                    <span>
+                  <div className="flex items-center justify-between pb-3 border-b border-border/30">
+                    <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
+                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-[pulse_2s_ease-in-out_infinite]" />
                       {selectedDateDetail.return_date ? "往返行程" : "单程行程"}
                     </span>
-                    <span className="text-primary font-bold text-sm">
+                    <span className="text-primary font-bold text-base gradient-text">
                       {fmtPrice(selectedDateDetail.alt_price, cur)}
                     </span>
                   </div>
@@ -852,12 +864,15 @@ export default function ResultsPage() {
                                   {formatAirportWithLang(item.origin || "", false)}
                                 </span>
                               </div>
-                              <div className="my-2 p-2.5 rounded-lg border border-border/50 bg-muted/20 text-[10px] text-muted-foreground flex flex-col gap-1">
+                              <div className="my-2 p-3 rounded-xl border border-border/40 bg-gradient-to-br from-muted/25 to-muted/10 text-[10px] text-muted-foreground flex flex-col gap-1.5 shadow-sm">
                                 <div className="flex justify-between font-semibold">
-                                  <span>{item.carrier} <b className="text-primary font-bold">{item.flightNumber}</b></span>
-                                  <span>{item.cabin}</span>
+                                  <span className="flex items-center gap-1">
+                                    <span className="inline-block h-4 w-4 rounded bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">✈</span>
+                                    {item.carrier} <b className="text-primary font-bold">{item.flightNumber}</b>
+                                  </span>
+                                  <span className="text-muted-foreground/80">{item.cabin}</span>
                                 </div>
-                                <div className="flex justify-between text-[9px] text-muted-foreground/80">
+                                <div className="flex justify-between text-[9px] text-muted-foreground/70">
                                   <span>{item.aircraft || "波音 777"}</span>
                                   <span className="text-good font-semibold">{item.meals}</span>
                                 </div>
@@ -891,10 +906,14 @@ export default function ResultsPage() {
                   </div>
 
                   {/* Action Link */}
-                  <div className="pt-2 border-t border-border/40 flex justify-end">
+                  <div className="pt-3 border-t border-border/30 flex items-center justify-between">
+                    <span className="text-[10px] text-muted-foreground/60 font-medium">
+                      数据来源 · Google Flights
+                    </span>
                     <a href={selectedDateDetail.deeplink} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" className="h-8 text-xs gap-1 cursor-pointer">
-                        去 Google Flights
+                      <Button size="sm" className="h-8 text-xs gap-1.5 cursor-pointer bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm">
+                        <Plane className="h-3 w-3" />
+                        去订票
                       </Button>
                     </a>
                   </div>
@@ -910,9 +929,12 @@ export default function ResultsPage() {
           </section>
 
           {/* 省钱机会 */}
-          <section className="flex flex-col gap-2">
-            <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
-              省钱机会（{displayOpportunities.length}）
+          <section className="flex flex-col gap-3">
+            <SectionTitle icon={<Sparkles className="h-4 w-4 text-warn" />} showLine>
+              省钱机会
+              <span className="ml-2 text-xs font-normal text-warn/80 bg-warn/[0.08] px-2 py-0.5 rounded-full">
+                {displayOpportunities.length} 个
+              </span>
             </SectionTitle>
             <div className="flex flex-col gap-3">
               {displayOpportunities.length === 0 ? (
@@ -934,14 +956,16 @@ export default function ResultsPage() {
         </div>
 
         {/* 右侧栏：价格趋势、全部日期表格 */}
-        <div className="flex flex-col gap-5 md:col-span-7 w-full">
+        <div className="flex flex-col gap-6 md:col-span-7 w-full">
           {/* 价格趋势 */}
           {displayResults.length > 1 && (
-            <section className="shrink-0 flex flex-col gap-2">
-              <SectionTitle>价格趋势</SectionTitle>
-              <Card className="shadow-sm">
-                <CardContent className="p-3">
-                  <div className="h-60 md:h-64 relative">
+            <section className="shrink-0 flex flex-col gap-3">
+              <SectionTitle showLine>📈 价格趋势</SectionTitle>
+              <Card className="shadow-sm overflow-hidden relative">
+                {/* 顶部装饰 */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/50 via-info/30 to-transparent" />
+                <CardContent className="p-4 bg-gradient-to-br from-card via-card to-primary/[0.02]">
+                  <div className="h-60 md:h-72 relative">
                     <PriceChart 
                       results={displayResults} 
                       currency={cur} 
@@ -955,8 +979,13 @@ export default function ResultsPage() {
           )}
 
           {/* 全部日期价格 */}
-          <section className="flex flex-col gap-2">
-            <SectionTitle>全部日期价格（{displayResults.length}）</SectionTitle>
+          <section className="flex flex-col gap-3">
+            <SectionTitle showLine>
+              📋 全部日期价格
+              <span className="ml-2 text-xs font-normal text-muted-foreground/70 bg-muted/40 px-2 py-0.5 rounded-full">
+                {displayResults.length} 天
+              </span>
+            </SectionTitle>
             <div>
               <ResultsTable 
                 results={displayResults} 
@@ -1010,9 +1039,9 @@ function Verdict({
   className?: string;
 }) {
   return (
-    <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
-      <p className="text-xs font-medium text-muted-foreground">{q}</p>
-      <div className="flex min-h-9 items-center">{main}</div>
+    <div className={`flex flex-col gap-2 ${className ?? ""}`}>
+      <p className="text-[11px] font-semibold text-muted-foreground/80 tracking-wide">{q}</p>
+      <div className="flex min-h-10 items-center">{main}</div>
       {extra && <div className="flex items-center gap-2">{extra}</div>}
     </div>
   );
@@ -1021,14 +1050,19 @@ function Verdict({
 function SectionTitle({
   children,
   icon,
+  showLine,
 }: {
   children: React.ReactNode;
   icon?: React.ReactNode;
+  showLine?: boolean;
 }) {
   return (
-    <h2 className="mb-3 flex items-center gap-1.5 text-sm font-semibold text-foreground">
-      {icon}
-      {children}
-    </h2>
+    <div className="flex flex-col gap-1">
+      <h2 className="flex items-center gap-1.5 text-sm font-semibold text-foreground">
+        {icon}
+        {children}
+      </h2>
+      {showLine && <div className="section-line w-12" />}
+    </div>
   );
 }

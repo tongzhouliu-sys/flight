@@ -213,3 +213,42 @@ body,
   animation: pulse-glow 3s ease-in-out infinite;
 }
 
+/* Fade-in animation for dynamic elements */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Shimmer effect for premium elements */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.animate-shimmer {
+  background-size: 200% 100%;
+  animation: shimmer 3s linear infinite;
+}
+
+/* Price highlight glow for lowest price indicators */
+.price-glow {
+  box-shadow: 0 0 12px -2px rgba(6, 118, 71, 0.2),
+              0 0 4px -1px rgba(6, 118, 71, 0.1);
+}
+
+:root[data-theme="dark"] .price-glow {
+  box-shadow: 0 0 16px -2px rgba(74, 222, 128, 0.15),
+              0 0 6px -1px rgba(74, 222, 128, 0.08);
+}
+
+/* Verdict card decorative divider */
+.verdict-divider {
+  background: linear-gradient(180deg, transparent, var(--border), transparent);
+}
+
+/* Section header decorative line */
+.section-line {
+  background: linear-gradient(90deg, var(--primary), transparent 80%);
+  height: 2px;
+  border-radius: 1px;
+}
