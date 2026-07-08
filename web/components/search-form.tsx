@@ -139,7 +139,7 @@ export function SearchForm({
   }, []);
 
   return (
-    <Card>
+    <Card className="w-full max-w-xl shadow-md border-border/80">
       <CardContent className="pt-5">
         <form
           onSubmit={(e) => {
@@ -149,7 +149,10 @@ export function SearchForm({
           className="flex flex-col gap-5"
         >
           {/* 机场 */}
-          <div className="relative grid gap-4 sm:grid-cols-[1fr_auto_1fr] items-end">
+          <div className={cn(
+            "relative grid gap-4 sm:grid-cols-[1fr_auto_1fr] items-end transition-all duration-200",
+            (form.origin || form.dest) ? "pb-5" : ""
+          )}>
             <div className="w-full">
               <Label htmlFor="origin">出发机场</Label>
               <AirportCombobox

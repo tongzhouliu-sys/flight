@@ -132,9 +132,9 @@ export function AirportCombobox({
 
       {/* 已选机场的城市 / 机场名提示 */}
       {selected && !open && (
-        <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+        <p className="absolute left-0 top-full mt-1 flex items-center gap-1 text-xs text-muted-foreground w-full">
           <MapPin className="h-3 w-3 shrink-0" />
-          {selected.name}（{selected.city}）
+          <span className="truncate">{selected.name}（{selected.city}）</span>
         </p>
       )}
 
