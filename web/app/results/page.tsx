@@ -20,6 +20,7 @@ import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 import { useCurrencyStore } from "@/lib/currency";
 import { cn } from "@/lib/utils";
+import { airportCity } from "@/lib/airports";
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -530,7 +531,7 @@ export default function ResultsPage() {
                                     : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
                                 )}
                               >
-                                {code}
+                                {airportCity(code) || code}
                               </button>
                             ))}
                           </div>

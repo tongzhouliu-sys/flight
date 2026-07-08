@@ -77,6 +77,13 @@ export function SearchForm({
     updateFilters({ aircraftTypes: list });
   };
 
+  const toggleTransitCity = (city: string) => {
+    const list = filters.transitCities.includes(city)
+      ? filters.transitCities.filter((c) => c !== city)
+      : [...filters.transitCities, city];
+    updateFilters({ transitCities: list });
+  };
+
   const flexNeedsDate = form.date_mode === "exact" || form.date_mode === "flex3";
   const isRoundTrip = form.trip_type === "round_trip";
 
@@ -403,6 +410,51 @@ export function SearchForm({
                             active={filters.transitCount.includes("2+")}
                             onClick={() => toggleTransitCount("2+")}
                             label="2次及以上"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">中转城市</span>
+                        <div className="grid grid-cols-4 gap-1">
+                          <FilterButton
+                            active={filters.transitCities.includes("SZX")}
+                            onClick={() => toggleTransitCity("SZX")}
+                            label="深圳"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("CAN")}
+                            onClick={() => toggleTransitCity("CAN")}
+                            label="广州"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("PEK")}
+                            onClick={() => toggleTransitCity("PEK")}
+                            label="北京"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("CTU")}
+                            onClick={() => toggleTransitCity("CTU")}
+                            label="成都"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("XMN")}
+                            onClick={() => toggleTransitCity("XMN")}
+                            label="厦门"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("PVG")}
+                            onClick={() => toggleTransitCity("PVG")}
+                            label="上海"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("MNL")}
+                            onClick={() => toggleTransitCity("MNL")}
+                            label="马尼拉"
+                          />
+                          <FilterButton
+                            active={filters.transitCities.includes("HKG")}
+                            onClick={() => toggleTransitCity("HKG")}
+                            label="香港"
                           />
                         </div>
                       </div>
