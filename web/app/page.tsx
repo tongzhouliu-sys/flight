@@ -45,9 +45,9 @@ export default function Home() {
   }
 
   return (
-    <div className="flex flex-col md:grid md:grid-cols-12 gap-6 md:h-full md:items-stretch overflow-hidden">
+    <div className="flex flex-col md:grid md:grid-cols-12 gap-6">
       {/* 左侧栏：宣传与快捷链接 */}
-      <div className="flex flex-col gap-5 md:col-span-5 md:justify-center md:h-full">
+      <div className="flex flex-col gap-5 md:col-span-5">
         {/* Premium Hero Section */}
         <section className="relative overflow-hidden rounded-2xl border border-primary/15 bg-gradient-to-br from-card via-card to-primary/5 p-5 shadow-md">
           {/* Decorative background glow */}
@@ -117,7 +117,7 @@ export default function Home() {
       </div>
 
       {/* 右侧栏：搜索表单 */}
-      <div className="md:col-span-7 md:h-full md:overflow-y-auto pr-1 thin-scroll flex flex-col justify-center">
+      <div className="md:col-span-7 w-full flex flex-col gap-4">
         <SearchForm key={formKey} initial={seed} autoSubmit={autoSubmit} />
       </div>
     </div>

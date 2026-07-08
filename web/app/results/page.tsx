@@ -69,9 +69,9 @@ export default function ResultsPage() {
     : null;
 
   return (
-    <div className="flex flex-col md:grid md:grid-cols-12 gap-5 md:h-full md:overflow-hidden">
+    <div className="flex flex-col md:grid md:grid-cols-12 gap-6 items-start">
       {/* 左侧栏：汇总信息、快速结论、省钱机会 */}
-      <div className="flex flex-col gap-4 md:col-span-5 md:h-full md:overflow-hidden">
+      <div className="flex flex-col gap-5 md:col-span-5 w-full">
         {/* 头部航线概要 */}
         <section className="flex items-center justify-between gap-2 p-1 shrink-0">
           <div>
@@ -161,13 +161,13 @@ export default function ResultsPage() {
         </Card>
 
         {/* 省钱机会 */}
-        <section className="flex-1 min-h-0 flex flex-col gap-2">
+        <section className="flex flex-col gap-2">
           <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
             省钱机会（{opportunities.length}）
           </SectionTitle>
-          <div className="flex-1 min-h-0 overflow-y-auto pr-1 thin-scroll flex flex-col gap-3">
+          <div className="flex flex-col gap-3">
             {opportunities.length === 0 ? (
-              <div className="flex-1 flex items-center justify-center p-6 border border-dashed rounded-xl bg-muted/10 text-center">
+              <div className="flex items-center justify-center p-6 border border-dashed rounded-xl bg-muted/10 text-center">
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">未发现明显省钱机会</p>
                   <p className="mt-1 text-xs text-muted-foreground/60 max-w-xs">当前窗口内价格无显著优惠，可查看右侧全部价格。</p>
@@ -185,7 +185,7 @@ export default function ResultsPage() {
       </div>
 
       {/* 右侧栏：价格趋势、全部日期表格 */}
-      <div className="flex flex-col gap-4 md:col-span-7 md:h-full md:overflow-hidden">
+      <div className="flex flex-col gap-5 md:col-span-7 w-full">
         {/* 价格趋势 */}
         {results.length > 1 && (
           <section className="shrink-0 flex flex-col gap-2">
@@ -201,9 +201,9 @@ export default function ResultsPage() {
         )}
 
         {/* 全部日期价格 */}
-        <section className="flex-1 min-h-0 flex flex-col gap-2">
+        <section className="flex flex-col gap-2">
           <SectionTitle>全部日期价格（{results.length}）</SectionTitle>
-          <div className="flex-1 min-h-0">
+          <div>
             <ResultsTable results={results} currency={cur} />
           </div>
         </section>
