@@ -252,3 +252,70 @@ body,
   height: 2px;
   border-radius: 1px;
 }
+
+/* Airplane Flying Animations */
+@keyframes plane-fly {
+  0%, 100% {
+    transform: translateY(0px) rotate(1deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(-2deg);
+  }
+}
+
+.animate-plane-fly {
+  animation: plane-fly 4s ease-in-out infinite;
+}
+
+@keyframes wind-flow {
+  0% {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  15% {
+    opacity: 0.4;
+  }
+  85% {
+    opacity: 0.4;
+  }
+  100% {
+    transform: translateX(-100%);
+    opacity: 0;
+  }
+}
+
+.animate-wind-flow-1 {
+  animation: wind-flow 2.2s linear infinite;
+}
+
+.animate-wind-flow-2 {
+  animation: wind-flow 3s linear infinite;
+  animation-delay: 0.6s;
+}
+
+.animate-wind-flow-3 {
+  animation: wind-flow 1.8s linear infinite;
+  animation-delay: 1.2s;
+}
+
+@keyframes cloud-drift {
+  0% {
+    transform: translateX(130%);
+  }
+  100% {
+    transform: translateX(-130%);
+  }
+}
+
+.animate-cloud-drift-slow {
+  animation: cloud-drift 28s linear infinite;
+}
+
+.animate-cloud-drift-medium {
+  animation: cloud-drift 20s linear infinite;
+}
+
+.animate-cloud-drift-fast {
+  animation: cloud-drift 14s linear infinite;
+}
+
