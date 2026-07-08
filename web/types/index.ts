@@ -2,7 +2,7 @@
 
 export type TripType = "one_way" | "round_trip";
 export type Cabin = "ECONOMY" | "PREMIUM_ECONOMY" | "BUSINESS" | "FIRST";
-export type DateMode = "exact" | "flex3" | "next7" | "next30";
+export type DateMode = "exact" | "flex3" | "next7" | "next30" | "next60";
 export type OpportunityType =
   | "baseline_breach"
   | "date_shift"

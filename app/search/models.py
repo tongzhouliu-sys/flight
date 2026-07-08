@@ -9,7 +9,7 @@ from app.search.errors import SearchInputError
 # fli SeatType 名（fli_provider 以 SeatType[cabin] 索引）
 VALID_CABINS = ("ECONOMY", "PREMIUM_ECONOMY", "BUSINESS", "FIRST")
 VALID_TRIP_TYPES = ("one_way", "round_trip")
-VALID_DATE_MODES = ("exact", "flex3", "next7", "next30")
+VALID_DATE_MODES = ("exact", "flex3", "next7", "next30", "next60")
 
 # 机会类型中文标签（与 dashboard._TYPE_CN 一致，presentational 常量）
 TYPE_LABELS = {
@@ -40,7 +40,7 @@ class SearchQuery:
     trip_type: str           # one_way | round_trip
     cabin: str               # ECONOMY | PREMIUM_ECONOMY | BUSINESS | FIRST
     adults: int
-    date_mode: str           # exact | flex3 | next7 | next30
+    date_mode: str           # exact | flex3 | next7 | next30 | next60
 
     @classmethod
     def parse(cls, data: dict) -> "SearchQuery":

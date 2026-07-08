@@ -17,6 +17,7 @@ export const DATE_MODES: { value: DateMode; label: string; hint: string }[] = [
   { value: "flex3", label: "±3 天", hint: "出发日前后 3 天" },
   { value: "next7", label: "未来 7 天", hint: "从今天起 7 天" },
   { value: "next30", label: "未来 30 天", hint: "从今天起 30 天" },
+  { value: "next60", label: "未来 2 个月", hint: "从今天起 60 天" },
 ];
 
 // ─────────────────────────────────────────────────────────────────────────

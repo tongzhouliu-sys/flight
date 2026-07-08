@@ -1,6 +1,6 @@
 """Route Expander：请求 → 日期窗口 + 往返时长 + 邻近机场候选 + 是否监控航线。
 
-- 日期窗口：exact=当日；flex3=中心±3；next7/next30=今天起 N 天。
+- 日期窗口：exact=当日；flex3=中心±3；next7/next30/next60=今天起 N 天。
 - 邻近机场候选：由 config/routes.yaml 的 nearby_airports 归纳（dest → 替代目的地）。
 - 命中 8 条监控航线之一 → 记录 route_id（决定 baseline 走 DB 还是冷启动）。
 """
@@ -51,8 +51,10 @@ def expand(q: SearchQuery) -> ExpandedPlan:
         center = q.depart_date
     elif q.date_mode == "next7":
         date_from, date_to, center = today, today + timedelta(days=7), None
-    else:  # next30
+    elif q.date_mode == "next30":
         date_from, date_to, center = today, today + timedelta(days=30), None
+    else:  # next60
+        date_from, date_to, center = today, today + timedelta(days=60), None
 
     stay_rep = None
     if q.trip_type == "round_trip":

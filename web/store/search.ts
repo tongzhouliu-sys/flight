@@ -65,7 +65,7 @@ export const useSearchStore = create<SearchState>((set, get) => ({
   },
 
   hydrate() {
-    if (get().response || typeof window === "undefined") return;
+    if (get().status === "loading" || get().response || typeof window === "undefined") return;
     const raw = sessionStorage.getItem(SESSION_KEY);
     if (!raw) return;
     try {

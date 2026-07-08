@@ -113,3 +113,13 @@ def test_input_validation():
     with pytest.raises(SearchInputError):
         SearchQuery.parse({"origin": "SIN", "dest": "HKG", "trip_type": "round_trip",
                            "date_mode": "exact", "depart_date": "2026-08-01"})  # 缺 return_date
+
+
+def test_next60_date_mode():
+    q = SearchQuery.parse({
+        "origin": "SIN", "dest": "HKG", "trip_type": "one_way",
+        "cabin": "ECONOMY", "adults": 1, "date_mode": "next60"
+    })
+    plan = expander.expand(q)
+    assert plan.date_to - plan.date_from == timedelta(days=60)
+

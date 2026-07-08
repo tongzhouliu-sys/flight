@@ -4,25 +4,12 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, Sparkles, SlidersHorizontal, ChevronDown, ChevronUp, X, Filter, Plane, AlertTriangle, Loader2 } from "lucide-react";
 import { OpportunityCard } from "@/components/opportunity-card";
-import { getAirport } from "@/lib/airports";
-import { generateItinerary } from "@/lib/visa-baggage";
 import type { Opportunity } from "@/types";
 
-function formatAirportWithLang(code: string, isEn: boolean): string {
-  const a = getAirport(code);
-  if (!a) return code;
-  if (isEn) {
-    return `${a.cityEn} Airport (${a.code})`;
-  } else {
-    if (a.name.startsWith(a.city)) {
-      return a.name;
-    }
-    return `${a.city}${a.name}`;
-  }
-}
 import { RouteLabel } from "@/components/route-label";
 import { PriceChart } from "@/components/price-chart";
 import { PriceCalendar } from "@/components/price-calendar";
+import { FlightDetailsAccordion } from "@/components/flight-details-accordion";
 import { EmptyState, ErrorState, Loading } from "@/components/states";
 import { Money } from "@/components/money";
 import { PriceLevelBadge } from "@/components/price-level-badge";
@@ -762,114 +749,7 @@ export default function ResultsPage() {
                 </CardContent>
               </Card>
             ) : selectedDateDetail ? (
-              <Card className="border border-border/60 shadow-sm flex flex-col overflow-hidden relative">
-                {/* 顶部装饰 */}
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/40 via-info/30 to-transparent" />
-                <CardContent className="p-5 flex flex-col gap-4">
-                  {/* Header info */}
-                  <div className="flex items-center justify-between pb-3 border-b border-border/30">
-                    <span className="text-xs text-muted-foreground font-semibold flex items-center gap-1.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-primary animate-[pulse_2s_ease-in-out_infinite]" />
-                      {selectedDateDetail.return_date ? "往返行程" : "单程行程"}
-                    </span>
-                    <span className="text-primary font-bold text-base gradient-text">
-                      {fmtPrice(selectedDateDetail.alt_price, cur)}
-                    </span>
-                  </div>
-
-                  {/* Timeline */}
-                  <div className="flex flex-col gap-4 max-h-[360px] overflow-y-auto pr-1">
-                    {generateItinerary(selectedDateDetail, false).map((item, idx) => {
-                      if (item.type === "flight") {
-                        return (
-                          <div key={idx} className="flex gap-3 text-xs">
-                            {/* Times */}
-                            <div className="w-14 shrink-0 text-right flex flex-col justify-between py-0.5">
-                              <div>
-                                <div className="font-bold text-foreground text-sm">{item.departTime}</div>
-                                <div className="text-[9px] text-muted-foreground font-medium">{item.departDate}</div>
-                              </div>
-                              <div className="my-2 text-[9px] text-muted-foreground/60 font-semibold">{item.duration}</div>
-                              <div>
-                                <div className="font-bold text-foreground text-sm">{item.arriveTime}</div>
-                                <div className="text-[9px] text-muted-foreground font-medium">{item.arriveDate}</div>
-                              </div>
-                            </div>
-
-                            {/* Track line */}
-                            <div className="flex flex-col items-center py-1 shrink-0">
-                              <div className="h-2.5 w-2.5 rounded-full border border-primary bg-card z-10 shrink-0 flex items-center justify-center">
-                                <div className="h-1 w-1 rounded-full bg-primary" />
-                              </div>
-                              <div className="w-0.5 border-l border-dashed border-border/70 flex-1 my-1 min-h-[40px]" />
-                              <div className="h-2.5 w-2.5 rounded-full border border-info bg-card z-10 shrink-0 flex items-center justify-center">
-                                <div className="h-1 w-1 rounded-full bg-info" />
-                              </div>
-                            </div>
-
-                            {/* Details */}
-                            <div className="flex-1 flex flex-col justify-between min-w-0">
-                              <div className="truncate font-semibold text-foreground text-sm flex items-center gap-1">
-                                <span className="font-extrabold text-primary text-base">{item.origin}</span>
-                                <span className="text-[10px] text-muted-foreground font-medium truncate">
-                                  {formatAirportWithLang(item.origin || "", false)}
-                                </span>
-                              </div>
-                              <div className="my-2 p-3 rounded-xl border border-border/40 bg-gradient-to-br from-muted/25 to-muted/10 text-[10px] text-muted-foreground flex flex-col gap-1.5 shadow-sm">
-                                <div className="flex justify-between font-semibold">
-                                  <span className="flex items-center gap-1">
-                                    <span className="inline-block h-4 w-4 rounded bg-primary/10 text-primary text-[8px] font-bold flex items-center justify-center">✈</span>
-                                    {item.carrier} <b className="text-primary font-bold">{item.flightNumber}</b>
-                                  </span>
-                                  <span className="text-muted-foreground/80">{item.cabin}</span>
-                                </div>
-                                <div className="flex justify-between text-[9px] text-muted-foreground/70">
-                                  <span>{item.aircraft || "波音 777"}</span>
-                                  <span className="text-good font-semibold">{item.meals}</span>
-                                </div>
-                              </div>
-                              <div className="truncate font-semibold text-foreground text-sm flex items-center gap-1">
-                                <span className="font-extrabold text-info text-base">{item.dest}</span>
-                                <span className="text-[10px] text-muted-foreground font-medium truncate">
-                                  {formatAirportWithLang(item.dest || "", false)}
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        );
-                      } else if (item.type === "layover") {
-                        return (
-                          <div key={idx} className="flex gap-3 my-1 text-xs">
-                            <div className="w-14 shrink-0" />
-                            <div className="flex flex-col items-center shrink-0">
-                              <div className="w-0.5 border-l border-dashed border-border/70 flex-1 min-h-[24px]" />
-                            </div>
-                            <div className="flex-1 bg-muted/30 border border-border/40 rounded-lg p-2 text-[10px]">
-                              <span className="font-semibold text-foreground">
-                                中转 {item.city} · {item.layoverDuration}
-                              </span>
-                            </div>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })}
-                  </div>
-
-                  {/* Action Link */}
-                  <div className="pt-3 border-t border-border/30 flex items-center justify-between">
-                    <span className="text-[10px] text-muted-foreground/60 font-medium">
-                      数据来源 · Google Flights
-                    </span>
-                    <a href={selectedDateDetail.deeplink} target="_blank" rel="noopener noreferrer">
-                      <Button size="sm" className="h-8 text-xs gap-1.5 cursor-pointer bg-gradient-to-r from-primary to-primary/90 hover:from-primary/90 hover:to-primary shadow-sm">
-                        <Plane className="h-3 w-3" />
-                        去订票
-                      </Button>
-                    </a>
-                  </div>
-                </CardContent>
-              </Card>
+              <FlightDetailsAccordion op={selectedDateDetail} />
             ) : (
               <Card className="border border-border/85 shadow-sm">
                 <CardContent className="p-6 text-center text-xs text-muted-foreground">
