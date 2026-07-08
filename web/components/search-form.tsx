@@ -28,7 +28,7 @@ const DEFAULTS: SearchParams = {
   trip_type: "one_way",
   cabin: "ECONOMY",
   adults: 1,
-  date_mode: "flex3",
+  date_mode: "next30",
 };
 
 export function SearchForm({

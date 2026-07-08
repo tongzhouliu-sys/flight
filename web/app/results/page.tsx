@@ -723,98 +723,6 @@ export default function ResultsPage() {
 
         {/* 右侧栏：快速结论、价格趋势、航班详情、省钱机会 */}
         <div className="flex flex-col gap-6 md:col-span-6 w-full">
-          {/* 快速结论：5 秒回答三问 */}
-          <Card className="overflow-hidden border-primary/15 shadow-sm shrink-0 relative">
-            {/* 顶部装饰渐变条 */}
-            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/60 via-info/40 to-good/50" />
-            <CardContent className="grid gap-4 p-5 grid-cols-3 bg-gradient-to-br from-card via-card to-primary/[0.03]">
-              <Verdict
-                q="💰 现在买贵不贵？"
-                main={
-                  cheapest != null ? (
-                    <Money
-                      value={cheapest}
-                      currency={cur}
-                      className="text-xl font-bold tracking-tight gradient-text"
-                    />
-                  ) : (
-                    <span className="text-lg text-muted-foreground">—</span>
-                  )
-                }
-                extra={
-                  topLevel ? (
-                    <PriceLevelBadge level={topLevel} size="sm" />
-                  ) : cheapest != null && highest != null && highest > cheapest ? (
-                    <span className="text-[10px] text-muted-foreground truncate">
-                      区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
-                    </span>
-                  ) : null
-                }
-              />
-              {/* 渐变分隔线 */}
-              <div className="verdict-divider w-px" />
-              <Verdict
-                q="✨ 有没有更便宜？"
-                className="pl-4"
-                main={
-                  top ? (
-                    <span className="tnum text-lg font-bold tracking-tight text-good">
-                      省 {fmtPrice(top.saving, cur)}
-                    </span>
-                  ) : (
-                    <span className="text-sm font-medium text-muted-foreground">暂未发现</span>
-                  )
-                }
-                extra={
-                  <span className="text-[10px] text-muted-foreground truncate">
-                    {displayOpportunities.length > 0
-                      ? `共 ${displayOpportunities.length} 个省钱机会`
-                      : "当前窗口较平稳"}
-                  </span>
-                }
-              />
-              {/* 渐变分隔线 */}
-              <div className="verdict-divider w-px" />
-              <Verdict
-                q="🎯 推荐买吗？"
-                className="pl-4"
-                main={
-                  top ? (
-                    <RecommendationStars count={top.stars} action={top.action} />
-                  ) : (
-                    <span className="text-sm font-medium text-muted-foreground">继续关注</span>
-                  )
-                }
-                extra={
-                  <span className="text-[10px] text-muted-foreground truncate">
-                    {top ? "基于历史与风险" : "暂无明显买点"}
-                  </span>
-                }
-              />
-            </CardContent>
-          </Card>
-
-          {/* 价格趋势 */}
-          {displayResults.length > 1 && (
-            <section className="shrink-0 flex flex-col gap-3">
-              <SectionTitle showLine>📈 价格趋势</SectionTitle>
-              <Card className="shadow-sm overflow-hidden relative">
-                {/* 顶部装饰 */}
-                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/50 via-info/30 to-transparent" />
-                <CardContent className="p-4 bg-gradient-to-br from-card via-card to-primary/[0.02]">
-                  <div className="h-60 md:h-72 relative">
-                    <PriceChart 
-                      results={displayResults} 
-                      currency={cur} 
-                      selectedDate={selectedDate}
-                      onSelectDate={setSelectedDate}
-                    />
-                  </div>
-                </CardContent>
-              </Card>
-            </section>
-          )}
-
           {/* 航班详情（所选日期） */}
           <section className="flex flex-col gap-3">
             <SectionTitle icon={<Plane className="h-4 w-4 text-primary" />} showLine>
@@ -971,6 +879,27 @@ export default function ResultsPage() {
             )}
           </section>
 
+          {/* 价格趋势 */}
+          {displayResults.length > 1 && (
+            <section className="shrink-0 flex flex-col gap-3">
+              <SectionTitle showLine>📈 价格趋势</SectionTitle>
+              <Card className="shadow-sm overflow-hidden relative">
+                {/* 顶部装饰 */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/50 via-info/30 to-transparent" />
+                <CardContent className="p-4 bg-gradient-to-br from-card via-card to-primary/[0.02]">
+                  <div className="h-60 md:h-72 relative">
+                    <PriceChart 
+                      results={displayResults} 
+                      currency={cur} 
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                    />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
           {/* 省钱机会 */}
           <section className="flex flex-col gap-3">
             <SectionTitle icon={<Sparkles className="h-4 w-4 text-warn" />} showLine>
@@ -996,6 +925,77 @@ export default function ResultsPage() {
               )}
             </div>
           </section>
+
+          {/* 快速结论：现在买贵不贵 */}
+          <Card className="overflow-hidden border-primary/15 shadow-sm shrink-0 relative">
+            {/* 顶部装饰渐变条 */}
+            <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-primary/60 via-info/40 to-good/50" />
+            <CardContent className="grid gap-4 p-5 grid-cols-3 bg-gradient-to-br from-card via-card to-primary/[0.03]">
+              <Verdict
+                q="💰 现在买贵不贵？"
+                main={
+                  cheapest != null ? (
+                    <Money
+                      value={cheapest}
+                      currency={cur}
+                      className="text-xl font-bold tracking-tight gradient-text"
+                    />
+                  ) : (
+                    <span className="text-lg text-muted-foreground">—</span>
+                  )
+                }
+                extra={
+                  topLevel ? (
+                    <PriceLevelBadge level={topLevel} size="sm" />
+                  ) : cheapest != null && highest != null && highest > cheapest ? (
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
+                    </span>
+                  ) : null
+                }
+              />
+              {/* 渐变分隔线 */}
+              <div className="verdict-divider w-px" />
+              <Verdict
+                q="✨ 有没有更便宜？"
+                className="pl-4"
+                main={
+                  top ? (
+                    <span className="tnum text-lg font-bold tracking-tight text-good">
+                      省 {fmtPrice(top.saving, cur)}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">暂未发现</span>
+                  )
+                }
+                extra={
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {displayOpportunities.length > 0
+                      ? `共 ${displayOpportunities.length} 个省钱机会`
+                      : "当前窗口较平稳"}
+                  </span>
+                }
+              />
+              {/* 渐变分隔线 */}
+              <div className="verdict-divider w-px" />
+              <Verdict
+                q="🎯 推荐买吗？"
+                className="pl-4"
+                main={
+                  top ? (
+                    <RecommendationStars count={top.stars} action={top.action} />
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">继续关注</span>
+                  )
+                }
+                extra={
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {top ? "基于历史与风险" : "暂无明显买点"}
+                  </span>
+                }
+              />
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
