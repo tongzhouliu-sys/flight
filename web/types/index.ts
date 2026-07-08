@@ -20,6 +20,24 @@ export interface SearchParams {
   date_mode: DateMode;
 }
 
+export interface SearchFilters {
+  directOnly: boolean;
+  studentTicket: boolean;
+  hasBaggage: boolean;
+  noTransitVisa: boolean;
+  excludeCodeshare: boolean;
+  excludeTax: boolean;
+  showOriginalPrice: boolean;
+  alliances: string[];
+  airlines: string[];
+  transitCities: string[];
+  transitCount: string[];
+  maxTransitDuration: number;
+  maxTotalDuration: number;
+  cabins: string[];
+  aircraftTypes: string[];
+}
+
 export interface CalendarResult {
   depart_date: string;
   return_date: string | null;

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeftRight, Search } from "lucide-react";
+import { ArrowLeftRight, Search, ChevronDown, ChevronUp, SlidersHorizontal } from "lucide-react";
 import { AirportCombobox } from "@/components/airport-combobox";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -43,6 +43,39 @@ export function SearchForm({
 
   const [form, setForm] = useState<SearchParams>({ ...DEFAULTS, ...(initial ?? {}) });
   const [error, setError] = useState<string | null>(null);
+
+  const [showAdvanced, setShowAdvanced] = useState(false);
+  const filters = useSearchStore((s) => s.filters);
+  const updateFilters = useSearchStore((s) => s.updateFilters);
+  const resetFilters = useSearchStore((s) => s.resetFilters);
+
+  const toggleAlliance = (alliance: string) => {
+    const list = filters.alliances.includes(alliance)
+      ? filters.alliances.filter((a) => a !== alliance)
+      : [...filters.alliances, alliance];
+    updateFilters({ alliances: list });
+  };
+
+  const toggleAirline = (airline: string) => {
+    const list = filters.airlines.includes(airline)
+      ? filters.airlines.filter((a) => a !== airline)
+      : [...filters.airlines, airline];
+    updateFilters({ airlines: list });
+  };
+
+  const toggleTransitCount = (count: string) => {
+    const list = filters.transitCount.includes(count)
+      ? filters.transitCount.filter((c) => c !== count)
+      : [...filters.transitCount, count];
+    updateFilters({ transitCount: list });
+  };
+
+  const toggleAircraftType = (type: string) => {
+    const list = filters.aircraftTypes.includes(type)
+      ? filters.aircraftTypes.filter((t) => t !== type)
+      : [...filters.aircraftTypes, type];
+    updateFilters({ aircraftTypes: list });
+  };
 
   const flexNeedsDate = form.date_mode === "exact" || form.date_mode === "flex3";
   const isRoundTrip = form.trip_type === "round_trip";
@@ -229,6 +262,206 @@ export function SearchForm({
             </div>
           </div>
 
+          {/* 高级筛选 */}
+          <div className="flex flex-col gap-4 border-t border-border/60 pt-4">
+            <div className="flex justify-between items-center">
+              <button
+                type="button"
+                onClick={() => setShowAdvanced(!showAdvanced)}
+                className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors cursor-pointer select-none"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>高级筛选条件</span>
+                {showAdvanced ? (
+                  <ChevronUp className="h-3.5 w-3.5" />
+                ) : (
+                  <ChevronDown className="h-3.5 w-3.5" />
+                )}
+              </button>
+              
+              {showAdvanced && (
+                <button
+                  type="button"
+                  onClick={() => resetFilters()}
+                  className="text-[11px] font-medium text-muted-foreground hover:text-primary transition-colors cursor-pointer"
+                >
+                  重置筛选
+                </button>
+              )}
+            </div>
+
+            {showAdvanced && (
+              <div className="grid gap-5 border-t border-border/20 pt-4">
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                  {/* Column 1: 航班偏好 */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">航班偏好</span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <FilterButton
+                        active={filters.directOnly}
+                        onClick={() => updateFilters({ directOnly: !filters.directOnly })}
+                        label="只看直飞"
+                      />
+                      <FilterButton
+                        active={filters.studentTicket}
+                        onClick={() => updateFilters({ studentTicket: !filters.studentTicket })}
+                        label="学生专享"
+                      />
+                      <FilterButton
+                        active={filters.hasBaggage}
+                        onClick={() => updateFilters({ hasBaggage: !filters.hasBaggage })}
+                        label="含行李额"
+                      />
+                      <FilterButton
+                        active={filters.noTransitVisa}
+                        onClick={() => updateFilters({ noTransitVisa: !filters.noTransitVisa })}
+                        label="免过境签"
+                      />
+                      <FilterButton
+                        active={filters.excludeCodeshare}
+                        onClick={() => updateFilters({ excludeCodeshare: !filters.excludeCodeshare })}
+                        label="无共享航班"
+                      />
+                      <FilterButton
+                        active={filters.excludeTax}
+                        onClick={() => updateFilters({ excludeTax: !filters.excludeTax })}
+                        label="不含税价"
+                      />
+                      <FilterButton
+                        active={filters.showOriginalPrice}
+                        onClick={() => updateFilters({ showOriginalPrice: !filters.showOriginalPrice })}
+                        label="优惠前价"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Column 2: 航空公司与联盟 */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">航空公司与联盟</span>
+                    <div className="flex flex-col gap-2 bg-muted/20 p-2.5 rounded-xl border border-border/40">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">航空联盟</span>
+                        <div className="grid grid-cols-3 gap-1">
+                          <FilterButton
+                            active={filters.alliances.includes("star")}
+                            onClick={() => toggleAlliance("star")}
+                            label="星空"
+                          />
+                          <FilterButton
+                            active={filters.alliances.includes("skyteam")}
+                            onClick={() => toggleAlliance("skyteam")}
+                            label="天合"
+                          />
+                          <FilterButton
+                            active={filters.alliances.includes("oneworld")}
+                            onClick={() => toggleAlliance("oneworld")}
+                            label="寰宇"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">航空公司</span>
+                        <div className="grid grid-cols-2 gap-1">
+                          <FilterButton
+                            active={filters.airlines.includes("MF")}
+                            onClick={() => toggleAirline("MF")}
+                            label="厦门航空"
+                          />
+                          <FilterButton
+                            active={filters.airlines.includes("CZ")}
+                            onClick={() => toggleAirline("CZ")}
+                            label="南方航空"
+                          />
+                          <FilterButton
+                            active={filters.airlines.includes("SQ")}
+                            onClick={() => toggleAirline("SQ")}
+                            label="新加坡航"
+                          />
+                          <FilterButton
+                            active={filters.airlines.includes("MU")}
+                            onClick={() => toggleAirline("MU")}
+                            label="东方航空"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Column 3: 中转与机型 */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">中转与机型</span>
+                    <div className="flex flex-col gap-2 bg-muted/20 p-2.5 rounded-xl border border-border/40">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">中转次数</span>
+                        <div className="grid grid-cols-2 gap-1">
+                          <FilterButton
+                            active={filters.transitCount.includes("1")}
+                            onClick={() => toggleTransitCount("1")}
+                            label="1次中转"
+                          />
+                          <FilterButton
+                            active={filters.transitCount.includes("2+")}
+                            onClick={() => toggleTransitCount("2+")}
+                            label="2次及以上"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">机型</span>
+                        <FilterButton
+                          active={filters.aircraftTypes.includes("large")}
+                          onClick={() => toggleAircraftType("large")}
+                          label="仅大型机"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sliders row */}
+                <div className="grid gap-4 sm:grid-cols-2 border-t border-border/20 pt-3">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="transit-dur" className="text-[11px] font-medium text-muted-foreground">最大中转时长</Label>
+                      <span className="text-[11px] font-semibold text-primary">
+                        {filters.maxTransitDuration === 28 ? "不限" : `${filters.maxTransitDuration} 小时`}
+                      </span>
+                    </div>
+                    <input
+                      id="transit-dur"
+                      type="range"
+                      min="1"
+                      max="28"
+                      value={filters.maxTransitDuration}
+                      onChange={(e) => updateFilters({ maxTransitDuration: Number(e.target.value) })}
+                      className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-[9px] text-muted-foreground/80">选择28小时即视为不限中转时长</span>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="total-dur" className="text-[11px] font-medium text-muted-foreground">最大航程总时长</Label>
+                      <span className="text-[11px] font-semibold text-primary">
+                        {filters.maxTotalDuration === 36 ? "不限" : `${filters.maxTotalDuration} 小时`}
+                      </span>
+                    </div>
+                    <input
+                      id="total-dur"
+                      type="range"
+                      min="5"
+                      max="36"
+                      value={filters.maxTotalDuration}
+                      onChange={(e) => updateFilters({ maxTotalDuration: Number(e.target.value) })}
+                      className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-[9px] text-muted-foreground/80">包含飞行和中转时间</span>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           {error && <p className="text-sm font-medium text-bad">{error}</p>}
 
           <Button
@@ -272,5 +505,31 @@ function Segmented({
         </button>
       ))}
     </div>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      key={label}
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center justify-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-[10px] font-medium transition-all duration-200 cursor-pointer w-full text-center truncate",
+        active
+          ? "bg-primary/10 border-primary text-primary font-semibold shadow-sm"
+          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+      )}
+    >
+      {label}
+    </button>
   );
 }

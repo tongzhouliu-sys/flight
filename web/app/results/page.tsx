@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles } from "lucide-react";
+import { ArrowLeft, Sparkles, SlidersHorizontal, ChevronDown, ChevronUp, X, Filter } from "lucide-react";
 import { OpportunityCard } from "@/components/opportunity-card";
 import { RouteLabel } from "@/components/route-label";
 import { PriceChart } from "@/components/price-chart";
@@ -13,11 +13,13 @@ import { PriceLevelBadge } from "@/components/price-level-badge";
 import { RecommendationStars } from "@/components/recommendation-stars";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { CABINS } from "@/lib/constants";
 import { fmtPrice } from "@/lib/format";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 import { useCurrencyStore } from "@/lib/currency";
+import { cn } from "@/lib/utils";
 
 export default function ResultsPage() {
   const router = useRouter();
@@ -27,6 +29,11 @@ export default function ResultsPage() {
   const params = useSearchStore((s) => s.params);
   const hydrate = useSearchStore((s) => s.hydrate);
   const runSearch = useSearchStore((s) => s.runSearch);
+
+  const filters = useSearchStore((s) => s.filters);
+  const updateFilters = useSearchStore((s) => s.updateFilters);
+  const resetFilters = useSearchStore((s) => s.resetFilters);
+  const [showFilterPanel, setShowFilterPanel] = useState(false);
 
   // 订阅汇率以支持响应式更新
   useCurrencyStore((s) => s.rate);
@@ -57,28 +64,252 @@ export default function ResultsPage() {
 
   const { results, opportunities, meta, query } = response;
   const cur = meta.currency;
-  const prices = results.map((r) => r.price);
-  const cheapest = prices.length ? Math.min(...prices) : null;
-  const highest = prices.length ? Math.max(...prices) : null;
   const cabinLabel =
     CABINS.find((c) => c.value === query.cabin)?.label ?? query.cabin;
 
-  const top = opportunities[0]; // 已按 saving 倒序
+  // 动态获取航空公司与中转城市供筛选
+  const allAirlines = Array.from(
+    new Set(opportunities.map((op) => (op.detail?.carrier as string || "").toUpperCase()))
+  ).filter(Boolean);
+
+  const allLayoverCities = Array.from(
+    new Set(opportunities.flatMap((op) => op.layover_cities || []))
+  ).map((c) => c.toUpperCase());
+
+  // 汇率或优惠前税费过滤
+  const TAX_SGD = 70;
+  const TAX_CNY = 350;
+
+  const adjustPrice = (price: number, currency: string) => {
+    let tax = 0;
+    if (filters.excludeTax) {
+      tax += currency === "SGD" ? TAX_SGD : TAX_CNY;
+    }
+    if (filters.studentTicket) {
+      return (price - tax) * 0.95;
+    }
+    return price - tax;
+  };
+
+  // 筛选 opportunities
+  const filteredOpportunities = opportunities.filter((op) => {
+    const carrier = (op.detail?.carrier as string || "").toUpperCase();
+    const stops = (op.detail?.stops as number | undefined) ?? op.layover_cities?.length ?? 0;
+
+    if (filters.directOnly && stops > 0) return false;
+    if (filters.hasBaggage && !op.free_checked_bag) return false;
+    if (
+      filters.noTransitVisa &&
+      (op.bag_recheck || op.risk_tags.includes("border_crossing") || op.type === "self_transfer")
+    )
+      return false;
+    if (filters.excludeCodeshare && op.risk_tags.includes("codeshare")) return false;
+
+    // 联盟
+    if (filters.alliances.length > 0) {
+      const star = ["SQ", "CA", "BR", "ZH", "UA", "LH", "NH", "NZ", "TG"];
+      const skyteam = ["MU", "CZ", "MF", "CI", "DL", "AF", "KL", "KE", "VN"];
+      const oneworld = ["CX", "JL", "AA", "BA", "QR", "AY", "MH"];
+      let matchAlliance = false;
+      if (filters.alliances.includes("star") && star.includes(carrier)) matchAlliance = true;
+      if (filters.alliances.includes("skyteam") && skyteam.includes(carrier)) matchAlliance = true;
+      if (filters.alliances.includes("oneworld") && oneworld.includes(carrier)) matchAlliance = true;
+      if (!matchAlliance) return false;
+    }
+
+    if (filters.airlines.length > 0 && !filters.airlines.includes(carrier)) return false;
+
+    // 中转次数
+    if (filters.transitCount.length > 0) {
+      const has1 = filters.transitCount.includes("1") && stops === 1;
+      const has2 = filters.transitCount.includes("2+") && stops >= 2;
+      if (!has1 && !has2) return false;
+    }
+
+    // 中转城市
+    if (filters.transitCities.length > 0) {
+      const cities = (op.layover_cities || []).map((c) => c.toUpperCase());
+      const matchCity = cities.some((c) => filters.transitCities.includes(c));
+      if (!matchCity) return false;
+    }
+
+    // 机型
+    if (filters.aircraftTypes.length > 0) {
+      const aircraft = (op.detail?.aircraft as string || "Boeing 777").toLowerCase();
+      const isLarge =
+        aircraft.includes("777") ||
+        aircraft.includes("787") ||
+        aircraft.includes("747") ||
+        aircraft.includes("350") ||
+        aircraft.includes("380") ||
+        aircraft.includes("大型");
+      if (filters.aircraftTypes.includes("large") && !isLarge) return false;
+    }
+
+    // 时长限制
+    const depDate = op.detail?.depart_time ? new Date(op.detail.depart_time as string) : null;
+    const arrDate = op.detail?.arrive_time ? new Date(op.detail.arrive_time as string) : null;
+    const totalMinutes =
+      depDate && arrDate ? Math.round((arrDate.getTime() - depDate.getTime()) / 60000) : 0;
+    const transitMinutes = stops === 0 ? 0 : stops === 1 ? (totalMinutes >= 300 ? 100 : 65) : stops * 100;
+
+    if (filters.maxTransitDuration < 28 && transitMinutes / 60 > filters.maxTransitDuration)
+      return false;
+    if (filters.maxTotalDuration < 36 && totalMinutes / 60 > filters.maxTotalDuration) return false;
+
+    return true;
+  });
+
+  // 筛选 results
+  const filteredResults = results.filter((r) => {
+    if (r.stops != null) {
+      if (filters.directOnly && r.stops > 0) return false;
+      if (filters.transitCount.length > 0) {
+        const has1 = filters.transitCount.includes("1") && r.stops === 1;
+        const has2 = filters.transitCount.includes("2+") && r.stops >= 2;
+        if (!has1 && !has2) return false;
+      }
+    }
+    if (r.carrier != null && filters.airlines.length > 0) {
+      if (!filters.airlines.includes(r.carrier.toUpperCase())) return false;
+    }
+    return true;
+  });
+
+  // 应用价格修改
+  const displayResults = filteredResults.map((r) => ({
+    ...r,
+    price: adjustPrice(r.price, r.currency),
+  }));
+
+  const displayOpportunities = filteredOpportunities.map((op) => {
+    const base = adjustPrice(op.base_price, op.currency);
+    const alt = adjustPrice(op.alt_price, op.currency);
+    return {
+      ...op,
+      base_price: base,
+      alt_price: alt,
+      saving: base - alt,
+    };
+  });
+
+  const displayPrices = displayResults.map((r) => r.price);
+  const cheapest = displayPrices.length ? Math.min(...displayPrices) : null;
+  const highest = displayPrices.length ? Math.max(...displayPrices) : null;
+
+  const top = displayOpportunities[0]; // 已按 saving 倒序
   const topLevel = top
     ? levelForOpportunity(readPercentile(top.detail), top.base_price, top.alt_price)
     : null;
 
+  // 标签与重置判定
+  const toggleAlliance = (alliance: string) => {
+    const list = filters.alliances.includes(alliance)
+      ? filters.alliances.filter((a) => a !== alliance)
+      : [...filters.alliances, alliance];
+    updateFilters({ alliances: list });
+  };
+
+  const toggleAirline = (airline: string) => {
+    const list = filters.airlines.includes(airline)
+      ? filters.airlines.filter((a) => a !== airline)
+      : [...filters.airlines, airline];
+    updateFilters({ airlines: list });
+  };
+
+  const toggleTransitCity = (city: string) => {
+    const list = filters.transitCities.includes(city)
+      ? filters.transitCities.filter((c) => c !== city)
+      : [...filters.transitCities, city];
+    updateFilters({ transitCities: list });
+  };
+
+  const toggleTransitCount = (count: string) => {
+    const list = filters.transitCount.includes(count)
+      ? filters.transitCount.filter((c) => c !== count)
+      : [...filters.transitCount, count];
+    updateFilters({ transitCount: list });
+  };
+
+  const toggleAircraftType = (type: string) => {
+    const list = filters.aircraftTypes.includes(type)
+      ? filters.aircraftTypes.filter((t) => t !== type)
+      : [...filters.aircraftTypes, type];
+    updateFilters({ aircraftTypes: list });
+  };
+
+  const activeTags: { label: string; onRemove: () => void }[] = [];
+  if (filters.directOnly)
+    activeTags.push({ label: "只看直飞", onRemove: () => updateFilters({ directOnly: false }) });
+  if (filters.studentTicket)
+    activeTags.push({ label: "学生专享", onRemove: () => updateFilters({ studentTicket: false }) });
+  if (filters.hasBaggage)
+    activeTags.push({ label: "含行李额", onRemove: () => updateFilters({ hasBaggage: false }) });
+  if (filters.noTransitVisa)
+    activeTags.push({ label: "免过境签", onRemove: () => updateFilters({ noTransitVisa: false }) });
+  if (filters.excludeCodeshare)
+    activeTags.push({
+      label: "无共享航班",
+      onRemove: () => updateFilters({ excludeCodeshare: false }),
+    });
+  if (filters.excludeTax)
+    activeTags.push({ label: "不含税价", onRemove: () => updateFilters({ excludeTax: false }) });
+  if (filters.showOriginalPrice)
+    activeTags.push({
+      label: "优惠前价",
+      onRemove: () => updateFilters({ showOriginalPrice: false }),
+    });
+
+  filters.alliances.forEach((a) => {
+    const name = a === "star" ? "星空联盟" : a === "skyteam" ? "天合联盟" : "寰宇一家";
+    activeTags.push({ label: name, onRemove: () => toggleAlliance(a) });
+  });
+
+  filters.airlines.forEach((code) => {
+    activeTags.push({ label: code, onRemove: () => toggleAirline(code) });
+  });
+
+  filters.transitCities.forEach((code) => {
+    activeTags.push({ label: `经 ${code}`, onRemove: () => toggleTransitCity(code) });
+  });
+
+  filters.transitCount.forEach((c) => {
+    activeTags.push({
+      label: c === "1" ? "1次中转" : "2次及以上中转",
+      onRemove: () => toggleTransitCount(c),
+    });
+  });
+
+  filters.aircraftTypes.forEach((t) => {
+    activeTags.push({ label: "大型客机", onRemove: () => toggleAircraftType(t) });
+  });
+
+  if (filters.maxTransitDuration < 28) {
+    activeTags.push({
+      label: `中转 ≤ ${filters.maxTransitDuration}h`,
+      onRemove: () => updateFilters({ maxTransitDuration: 28 }),
+    });
+  }
+
+  if (filters.maxTotalDuration < 36) {
+    activeTags.push({
+      label: `总时长 ≤ ${filters.maxTotalDuration}h`,
+      onRemove: () => updateFilters({ maxTotalDuration: 36 }),
+    });
+  }
+
+  const hasAnyActiveFilter = activeTags.length > 0;
+
   return (
-    <div className="flex flex-col md:grid md:grid-cols-12 gap-6 items-start">
-      {/* 左侧栏：汇总信息、快速结论、省钱机会 */}
-      <div className="flex flex-col gap-5 md:col-span-5 w-full">
-        {/* 头部航线概要 */}
+    <div className="flex flex-col gap-5 w-full">
+      {/* 头部航线概要与筛选栏 */}
+      <div className="flex flex-col gap-4">
         <section className="flex items-center justify-between gap-2 p-1 shrink-0">
           <div>
             <RouteLabel origin={query.origin} dest={query.dest} size="lg" />
             <p className="mt-0.5 text-xs text-muted-foreground">
-              {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"}{" "}
-              · {query.adults} 人 · 采样 {meta.point_count} 天
+              {cabinLabel} · {query.trip_type === "round_trip" ? "往返" : "单程"} · {query.adults}{" "}
+              人 · 采样 {meta.point_count} 天
               {meta.cached && " · 缓存"}
             </p>
           </div>
@@ -91,124 +322,430 @@ export default function ResultsPage() {
           </button>
         </section>
 
-        {/* 快速结论：5 秒回答三问 */}
-        <Card className="overflow-hidden border-primary/10 shadow-sm shrink-0">
-          <CardContent className="grid gap-4 p-4 grid-cols-3 divide-x divide-border/80 bg-gradient-to-br from-card via-card to-primary/5">
-            <Verdict
-              q="现在买贵不贵？"
-              main={
-                cheapest != null ? (
-                  <Money
-                    value={cheapest}
-                    currency={cur}
-                    className="text-lg font-bold tracking-tight"
-                  />
-                ) : (
-                  "—"
-                )
-              }
-              extra={
-                topLevel ? (
-                  <PriceLevelBadge level={topLevel} size="sm" />
-                ) : cheapest != null && highest != null && highest > cheapest ? (
-                  <span className="text-[10px] text-muted-foreground truncate">
-                    区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
-                  </span>
-                ) : null
-              }
-            />
-            <Verdict
-              q="有没有更便宜？"
-              className="pl-3"
-              main={
-                top ? (
-                  <span className="tnum text-lg font-bold tracking-tight text-good">
-                    省 {fmtPrice(top.saving, cur)}
-                  </span>
-                ) : (
-                  <span className="text-sm font-medium text-muted-foreground">
-                    暂未发现
-                  </span>
-                )
-              }
-              extra={
-                <span className="text-[10px] text-muted-foreground truncate">
-                  {opportunities.length > 0
-                    ? `共 ${opportunities.length} 个省钱机会`
-                    : "当前窗口较平稳"}
+        {/* 筛选控制器卡片 */}
+        <Card className="w-full shadow-sm border-border/80">
+          <CardContent className="p-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold text-muted-foreground flex items-center gap-1">
+                  <Filter className="h-3.5 w-3.5" /> 筛选条件:
                 </span>
-              }
-            />
-            <Verdict
-              q="推荐买吗？"
-              className="pl-3"
-              main={
-                top ? (
-                  <RecommendationStars count={top.stars} action={top.action} />
-                ) : (
-                  <span className="text-sm font-medium text-muted-foreground">
-                    继续关注
+                {activeTags.length === 0 ? (
+                  <span className="text-xs text-muted-foreground bg-muted/30 px-2.5 py-0.5 rounded-full border border-border/30">
+                    全部航班 (未启用筛选)
                   </span>
-                )
-              }
-              extra={
-                <span className="text-[10px] text-muted-foreground truncate">
-                  {top ? "基于历史与风险" : "暂无明显买点"}
-                </span>
-              }
-            />
-          </CardContent>
-        </Card>
-
-        {/* 省钱机会 */}
-        <section className="flex flex-col gap-2">
-          <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
-            省钱机会（{opportunities.length}）
-          </SectionTitle>
-          <div className="flex flex-col gap-3">
-            {opportunities.length === 0 ? (
-              <div className="flex items-center justify-center p-6 border border-dashed rounded-xl bg-muted/10 text-center">
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">未发现明显省钱机会</p>
-                  <p className="mt-1 text-xs text-muted-foreground/60 max-w-xs">当前窗口内价格无显著优惠，可查看右侧全部价格。</p>
-                </div>
+                ) : (
+                  <div className="flex flex-wrap gap-1.5">
+                    {activeTags.map((tag, idx) => (
+                      <span
+                        key={idx}
+                        className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs bg-primary/5 text-primary border border-primary/20"
+                      >
+                        {tag.label}
+                        <button
+                          type="button"
+                          onClick={tag.onRemove}
+                          className="text-primary/70 hover:text-primary transition-colors cursor-pointer"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div className="grid items-stretch gap-3 grid-cols-1">
-                {opportunities.map((op, i) => (
-                  <OpportunityCard key={`${op.type}-${i}`} op={op} index={i} />
-                ))}
+
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowFilterPanel(!showFilterPanel)}
+                  className="gap-1 text-xs font-medium cursor-pointer"
+                >
+                  <SlidersHorizontal className="h-3.5 w-3.5" />
+                  {showFilterPanel ? "收起筛选" : "修改筛选"}
+                  {showFilterPanel ? (
+                    <ChevronUp className="h-3.5 w-3.5" />
+                  ) : (
+                    <ChevronDown className="h-3.5 w-3.5" />
+                  )}
+                </Button>
+                {hasAnyActiveFilter && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => resetFilters()}
+                    className="text-xs font-medium text-muted-foreground hover:text-primary cursor-pointer"
+                  >
+                    重置
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            {/* 折叠的高级筛选面板 */}
+            {showFilterPanel && (
+              <div className="border-t border-border/40 pt-4 grid gap-5">
+                <div className="grid gap-4 sm:grid-cols-2 md:grid-cols-3">
+                  {/* Column 1: 航班偏好 */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">
+                      航班偏好
+                    </span>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      <FilterButton
+                        active={filters.directOnly}
+                        onClick={() => updateFilters({ directOnly: !filters.directOnly })}
+                        label="只看直飞"
+                      />
+                      <FilterButton
+                        active={filters.studentTicket}
+                        onClick={() => updateFilters({ studentTicket: !filters.studentTicket })}
+                        label="学生专享"
+                      />
+                      <FilterButton
+                        active={filters.hasBaggage}
+                        onClick={() => updateFilters({ hasBaggage: !filters.hasBaggage })}
+                        label="含行李额"
+                      />
+                      <FilterButton
+                        active={filters.noTransitVisa}
+                        onClick={() => updateFilters({ noTransitVisa: !filters.noTransitVisa })}
+                        label="免过境签"
+                      />
+                      <FilterButton
+                        active={filters.excludeCodeshare}
+                        onClick={() => updateFilters({ excludeCodeshare: !filters.excludeCodeshare })}
+                        label="无共享航班"
+                      />
+                      <FilterButton
+                        active={filters.excludeTax}
+                        onClick={() => updateFilters({ excludeTax: !filters.excludeTax })}
+                        label="不含税价"
+                      />
+                      <FilterButton
+                        active={filters.showOriginalPrice}
+                        onClick={() => updateFilters({ showOriginalPrice: !filters.showOriginalPrice })}
+                        label="优惠前价"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Column 2: 航空公司与联盟 */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">
+                      航空公司与联盟
+                    </span>
+                    <div className="flex flex-col gap-2 bg-muted/20 p-2.5 rounded-xl border border-border/40">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">航空联盟</span>
+                        <div className="grid grid-cols-3 gap-1">
+                          <FilterButton
+                            active={filters.alliances.includes("star")}
+                            onClick={() => toggleAlliance("star")}
+                            label="星空"
+                          />
+                          <FilterButton
+                            active={filters.alliances.includes("skyteam")}
+                            onClick={() => toggleAlliance("skyteam")}
+                            label="天合"
+                          />
+                          <FilterButton
+                            active={filters.alliances.includes("oneworld")}
+                            onClick={() => toggleAlliance("oneworld")}
+                            label="寰宇"
+                          />
+                        </div>
+                      </div>
+
+                      {allAirlines.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-muted-foreground font-medium">航空公司</span>
+                          <div className="grid grid-cols-2 gap-1 max-h-24 overflow-y-auto thin-scroll">
+                            {allAirlines.map((code) => (
+                              <FilterButton
+                                key={code}
+                                active={filters.airlines.includes(code)}
+                                onClick={() => toggleAirline(code)}
+                                label={
+                                  code === "MF"
+                                    ? "厦门航空"
+                                    : code === "CZ"
+                                      ? "南方航空"
+                                      : code === "SQ"
+                                        ? "新加坡航"
+                                        : code === "MU"
+                                          ? "东方航空"
+                                          : code === "CX"
+                                            ? "国泰航空"
+                                            : code
+                                }
+                              />
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Column 3: 中转与机型 */}
+                  <div className="flex flex-col gap-2">
+                    <span className="text-[11px] font-semibold text-muted-foreground/80 uppercase tracking-wider">
+                      中转与机型
+                    </span>
+                    <div className="flex flex-col gap-2 bg-muted/20 p-2.5 rounded-xl border border-border/40">
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium font-medium">
+                          中转次数
+                        </span>
+                        <div className="grid grid-cols-2 gap-1">
+                          <FilterButton
+                            active={filters.transitCount.includes("1")}
+                            onClick={() => toggleTransitCount("1")}
+                            label="1次中转"
+                          />
+                          <FilterButton
+                            active={filters.transitCount.includes("2+")}
+                            onClick={() => toggleTransitCount("2+")}
+                            label="2次及以上"
+                          />
+                        </div>
+                      </div>
+
+                      {allLayoverCities.length > 0 && (
+                        <div className="flex flex-col gap-1">
+                          <span className="text-[10px] text-muted-foreground font-medium font-medium">
+                            中转城市
+                          </span>
+                          <div className="flex flex-wrap gap-1 max-h-20 overflow-y-auto thin-scroll">
+                            {allLayoverCities.map((code) => (
+                              <button
+                                key={code}
+                                type="button"
+                                onClick={() => toggleTransitCity(code)}
+                                className={cn(
+                                  "px-2 py-0.5 rounded text-[9px] border transition-colors cursor-pointer",
+                                  filters.transitCities.includes(code)
+                                    ? "bg-primary/10 border-primary text-primary font-medium"
+                                    : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+                                )}
+                              >
+                                {code}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-muted-foreground font-medium">机型</span>
+                        <FilterButton
+                          active={filters.aircraftTypes.includes("large")}
+                          onClick={() => toggleAircraftType("large")}
+                          label="仅大型机"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Sliders row */}
+                <div className="grid gap-4 sm:grid-cols-2 border-t border-border/20 pt-3">
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="transit-dur" className="text-[11px] font-medium text-muted-foreground">
+                        最大中转时长
+                      </Label>
+                      <span className="text-[11px] font-semibold text-primary">
+                        {filters.maxTransitDuration === 28 ? "不限" : `${filters.maxTransitDuration} 小时`}
+                      </span>
+                    </div>
+                    <input
+                      id="transit-dur"
+                      type="range"
+                      min="1"
+                      max="28"
+                      value={filters.maxTransitDuration}
+                      onChange={(e) => updateFilters({ maxTransitDuration: Number(e.target.value) })}
+                      className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-[9px] text-muted-foreground/80">
+                      选择28小时即视为不限中转时长
+                    </span>
+                  </div>
+
+                  <div className="flex flex-col gap-1.5">
+                    <div className="flex justify-between items-center">
+                      <Label htmlFor="total-dur" className="text-[11px] font-medium text-muted-foreground">
+                        最大航程总时长
+                      </Label>
+                      <span className="text-[11px] font-semibold text-primary">
+                        {filters.maxTotalDuration === 36 ? "不限" : `${filters.maxTotalDuration} 小时`}
+                      </span>
+                    </div>
+                    <input
+                      id="total-dur"
+                      type="range"
+                      min="5"
+                      max="36"
+                      value={filters.maxTotalDuration}
+                      onChange={(e) => updateFilters({ maxTotalDuration: Number(e.target.value) })}
+                      className="w-full accent-primary h-1 bg-muted rounded-lg appearance-none cursor-pointer"
+                    />
+                    <span className="text-[9px] text-muted-foreground/80">包含飞行和中转时间</span>
+                  </div>
+                </div>
               </div>
             )}
-          </div>
-        </section>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* 右侧栏：价格趋势、全部日期表格 */}
-      <div className="flex flex-col gap-5 md:col-span-7 w-full">
-        {/* 价格趋势 */}
-        {results.length > 1 && (
-          <section className="shrink-0 flex flex-col gap-2">
-            <SectionTitle>价格趋势</SectionTitle>
-            <Card className="shadow-sm">
-              <CardContent className="p-3">
-                <div className="h-40 md:h-44 relative">
-                  <PriceChart results={results} currency={cur} />
-                </div>
-              </CardContent>
-            </Card>
-          </section>
-        )}
+      {/* 两栏式卡片布局 */}
+      <div className="flex flex-col md:grid md:grid-cols-12 gap-6 items-start w-full">
+        {/* 左侧栏：快速结论、省钱机会 */}
+        <div className="flex flex-col gap-5 md:col-span-5 w-full">
+          {/* 快速结论：5 秒回答三问 */}
+          <Card className="overflow-hidden border-primary/10 shadow-sm shrink-0">
+            <CardContent className="grid gap-4 p-4 grid-cols-3 divide-x divide-border/80 bg-gradient-to-br from-card via-card to-primary/5">
+              <Verdict
+                q="现在买贵不贵？"
+                main={
+                  cheapest != null ? (
+                    <Money
+                      value={cheapest}
+                      currency={cur}
+                      className="text-lg font-bold tracking-tight"
+                    />
+                  ) : (
+                    "—"
+                  )
+                }
+                extra={
+                  topLevel ? (
+                    <PriceLevelBadge level={topLevel} size="sm" />
+                  ) : cheapest != null && highest != null && highest > cheapest ? (
+                    <span className="text-[10px] text-muted-foreground truncate">
+                      区间 {fmtPrice(cheapest, cur)} – {fmtPrice(highest, cur)}
+                    </span>
+                  ) : null
+                }
+              />
+              <Verdict
+                q="有没有更便宜？"
+                className="pl-3"
+                main={
+                  top ? (
+                    <span className="tnum text-lg font-bold tracking-tight text-good">
+                      省 {fmtPrice(top.saving, cur)}
+                    </span>
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">暂未发现</span>
+                  )
+                }
+                extra={
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {displayOpportunities.length > 0
+                      ? `共 ${displayOpportunities.length} 个省钱机会`
+                      : "当前窗口较平稳"}
+                  </span>
+                }
+              />
+              <Verdict
+                q="推荐买吗？"
+                className="pl-3"
+                main={
+                  top ? (
+                    <RecommendationStars count={top.stars} action={top.action} />
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">继续关注</span>
+                  )
+                }
+                extra={
+                  <span className="text-[10px] text-muted-foreground truncate">
+                    {top ? "基于历史与风险" : "暂无明显买点"}
+                  </span>
+                }
+              />
+            </CardContent>
+          </Card>
 
-        {/* 全部日期价格 */}
-        <section className="flex flex-col gap-2">
-          <SectionTitle>全部日期价格（{results.length}）</SectionTitle>
-          <div>
-            <ResultsTable results={results} currency={cur} />
-          </div>
-        </section>
+          {/* 省钱机会 */}
+          <section className="flex flex-col gap-2">
+            <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
+              省钱机会（{displayOpportunities.length}）
+            </SectionTitle>
+            <div className="flex flex-col gap-3">
+              {displayOpportunities.length === 0 ? (
+                <div className="flex items-center justify-center p-6 border border-dashed rounded-xl bg-muted/10 text-center">
+                  <div>
+                    <p className="text-sm font-medium text-muted-foreground">未发现符合筛选条件的省钱机会</p>
+                    <p className="mt-1 text-xs text-muted-foreground/60 max-w-xs">当前筛选条件可能偏严格，可以试着放宽某些筛选选项。</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid items-stretch gap-3 grid-cols-1">
+                  {displayOpportunities.map((op, i) => (
+                    <OpportunityCard key={`${op.type}-${i}`} op={op} index={i} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+        </div>
+
+        {/* 右侧栏：价格趋势、全部日期表格 */}
+        <div className="flex flex-col gap-5 md:col-span-7 w-full">
+          {/* 价格趋势 */}
+          {displayResults.length > 1 && (
+            <section className="shrink-0 flex flex-col gap-2">
+              <SectionTitle>价格趋势</SectionTitle>
+              <Card className="shadow-sm">
+                <CardContent className="p-3">
+                  <div className="h-40 md:h-44 relative">
+                    <PriceChart results={displayResults} currency={cur} />
+                  </div>
+                </CardContent>
+              </Card>
+            </section>
+          )}
+
+          {/* 全部日期价格 */}
+          <section className="flex flex-col gap-2">
+            <SectionTitle>全部日期价格（{displayResults.length}）</SectionTitle>
+            <div>
+              <ResultsTable results={displayResults} currency={cur} />
+            </div>
+          </section>
+        </div>
       </div>
     </div>
+  );
+}
+
+function FilterButton({
+  active,
+  onClick,
+  label,
+}: {
+  active: boolean;
+  onClick: () => void;
+  label: string;
+}) {
+  return (
+    <button
+      key={label}
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "flex items-center justify-center gap-1.5 rounded-xl border px-2 py-1 text-[10px] font-medium transition-all duration-200 cursor-pointer w-full text-center truncate",
+        active
+          ? "bg-primary/10 border-primary text-primary font-semibold shadow-sm"
+          : "bg-card border-border hover:bg-muted text-muted-foreground hover:text-foreground"
+      )}
+    >
+      {label}
+    </button>
   );
 }
 

@@ -108,7 +108,32 @@ export default function OpportunityDetailPage() {
   if (status === "loading" && !response) return <Loading />;
 
   const index = Number(params.id);
-  const op = response?.opportunities?.[index];
+  const rawOp = response?.opportunities?.[index];
+  const filters = useSearchStore((s) => s.filters);
+
+  const op = rawOp ? (() => {
+    const TAX_SGD = 70;
+    const TAX_CNY = 350;
+    const adjustPrice = (price: number, currency: string) => {
+      let tax = 0;
+      if (filters.excludeTax) {
+        tax += currency === "SGD" ? TAX_SGD : TAX_CNY;
+      }
+      if (filters.studentTicket) {
+        return (price - tax) * 0.95;
+      }
+      return price - tax;
+    };
+
+    const base = adjustPrice(rawOp.base_price, rawOp.currency);
+    const alt = adjustPrice(rawOp.alt_price, rawOp.currency);
+    return {
+      ...rawOp,
+      base_price: base,
+      alt_price: alt,
+      saving: base - alt,
+    };
+  })() : null;
 
   if (!op)
     return (
@@ -174,11 +199,23 @@ export default function OpportunityDetailPage() {
           </p>
         </div>
         <div className="flex flex-col items-end gap-1.5">
-          <Money
-            value={op.alt_price}
-            currency={cur}
-            className="text-3xl font-bold tracking-tight"
-          />
+          <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            <Money
+              value={op.alt_price}
+              currency={cur}
+              className="text-3xl font-bold tracking-tight"
+            />
+            {filters.excludeTax && (
+              <Badge tone="muted" className="scale-90 select-none py-0 px-1.5 text-[9px] rounded-md font-medium">
+                不含税
+              </Badge>
+            )}
+            {filters.studentTicket && (
+              <Badge tone="info" className="scale-90 select-none py-0 px-1.5 text-[9px] rounded-md font-semibold">
+                学生专享
+              </Badge>
+            )}
+          </div>
           <p className="tnum text-sm font-medium text-good">
             立省 {fmtPrice(op.saving, cur)}
           </p>

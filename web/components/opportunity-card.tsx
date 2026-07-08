@@ -18,6 +18,7 @@ import {
   levelForOpportunity,
   readPercentile,
 } from "@/lib/price-level";
+import { useSearchStore } from "@/store/search";
 import type { Opportunity } from "@/types";
 
 export function OpportunityCard({
@@ -28,6 +29,7 @@ export function OpportunityCard({
   index: number;
 }) {
   useCurrencyStore((s) => s.rate);
+  const filters = useSearchStore((s) => s.filters);
   const meta = oppMeta(op.type, op.type_label);
   const level = levelForOpportunity(
     readPercentile(op.detail),
@@ -64,11 +66,23 @@ export function OpportunityCard({
           {/* 价格 + 水位 + 便宜幅度（贵不贵 + 更便宜方案） */}
           <div className="flex items-end justify-between gap-3">
             <div className="min-w-0">
-              <Money
-                value={op.alt_price}
-                currency={op.currency}
-                className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/85 bg-clip-text"
-              />
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <Money
+                  value={op.alt_price}
+                  currency={op.currency}
+                  className="text-2xl font-bold tracking-tight bg-gradient-to-r from-foreground to-foreground/85 bg-clip-text"
+                />
+                {filters.excludeTax && (
+                  <Badge tone="muted" className="scale-90 select-none py-0 px-1.5 text-[9px] rounded-md font-medium">
+                    不含税
+                  </Badge>
+                )}
+                {filters.studentTicket && (
+                  <Badge tone="info" className="scale-90 select-none py-0 px-1.5 text-[9px] rounded-md font-semibold">
+                    学生专享
+                  </Badge>
+                )}
+              </div>
               <div className="mt-1.5 flex flex-wrap items-center gap-2">
                 <PriceLevelBadge level={level} size="sm" />
                 {disc != null && (
