@@ -22,7 +22,7 @@ function formatAirportWithLang(code: string, isEn: boolean): string {
 }
 import { RouteLabel } from "@/components/route-label";
 import { PriceChart } from "@/components/price-chart";
-import { ResultsTable } from "@/components/results-table";
+import { PriceCalendar } from "@/components/price-calendar";
 import { EmptyState, ErrorState, Loading } from "@/components/states";
 import { Money } from "@/components/money";
 import { PriceLevelBadge } from "@/components/price-level-badge";
@@ -978,22 +978,25 @@ export default function ResultsPage() {
             </section>
           )}
 
-          {/* 全部日期价格 */}
+          {/* 价格日历 */}
           <section className="flex flex-col gap-3">
             <SectionTitle showLine>
-              📋 全部日期价格
+              📅 价格日历
               <span className="ml-2 text-xs font-normal text-muted-foreground/70 bg-muted/40 px-2 py-0.5 rounded-full">
                 {displayResults.length} 天
               </span>
             </SectionTitle>
-            <div>
-              <ResultsTable 
-                results={displayResults} 
-                currency={cur} 
-                selectedDate={selectedDate}
-                onSelectDate={setSelectedDate}
-              />
-            </div>
+            <Card className="shadow-sm overflow-hidden relative">
+              <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-orange-400/50 via-primary/30 to-transparent" />
+              <CardContent className="p-0">
+                <PriceCalendar
+                  results={displayResults}
+                  currency={cur}
+                  selectedDate={selectedDate}
+                  onSelectDate={setSelectedDate}
+                />
+              </CardContent>
+            </Card>
           </section>
         </div>
       </div>
