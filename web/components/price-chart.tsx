@@ -35,9 +35,13 @@ function cssVar(name: string, fallback: string): string {
 export function PriceChart({
   results,
   currency,
+  selectedDate,
+  onSelectDate,
 }: {
   results: CalendarResult[];
   currency: string;
+  selectedDate?: string | null;
+  onSelectDate?: (date: string) => void;
 }) {
   const [mounted, setMounted] = useState(false);
   useEffect(() => {
@@ -69,15 +73,15 @@ export function PriceChart({
         fill: true,
         tension: 0.3,
         borderWidth: 2,
-        // 最低价点：绿色放大，便于一眼定位最划算日期
+        // 最低价点：绿色放大；选中点：红色放大，便于一眼定位
         pointRadius: sorted.map((r) =>
-          r.price === min ? 5 : sorted.length > 30 ? 0 : 2.5,
+          r.depart_date === selectedDate ? 7 : (r.price === min ? 5 : sorted.length > 30 ? 0 : 2.5),
         ),
-        pointHoverRadius: 5,
+        pointHoverRadius: 7,
         pointBackgroundColor: sorted.map((r) =>
-          r.price === min ? good : line,
+          r.depart_date === selectedDate ? "#ff4d4f" : (r.price === min ? good : line),
         ),
-        pointBorderColor: sorted.map((r) => (r.price === min ? good : line)),
+        pointBorderColor: sorted.map((r) => (r.depart_date === selectedDate ? "#ff4d4f" : r.price === min ? good : line)),
       },
     ],
   };
@@ -85,6 +89,13 @@ export function PriceChart({
   const options: ChartOptions<"line"> = {
     responsive: true,
     maintainAspectRatio: false,
+    onClick: (event, elements) => {
+      if (elements && elements.length > 0) {
+        const index = elements[0].index;
+        const clickedDate = sorted[index].depart_date;
+        onSelectDate?.(clickedDate);
+      }
+    },
     plugins: {
       legend: { display: false },
       tooltip: {
@@ -116,7 +127,7 @@ export function PriceChart({
   };
 
   return (
-    <div className="h-64 w-full">
+    <div className="h-full w-full">
       <Line data={data} options={options} />
     </div>
   );

@@ -93,6 +93,7 @@ export default function OpportunityDetailPage() {
   const status = useSearchStore((s) => s.status);
   const response = useSearchStore((s) => s.response);
   const hydrate = useSearchStore((s) => s.hydrate);
+  const filters = useSearchStore((s) => s.filters);
 
   const [lang, setLang] = useState<"zh" | "en">("zh");
   const [copied, setCopied] = useState(false);
@@ -109,7 +110,6 @@ export default function OpportunityDetailPage() {
 
   const index = Number(params.id);
   const rawOp = response?.opportunities?.[index];
-  const filters = useSearchStore((s) => s.filters);
 
   const op = rawOp ? (() => {
     const TAX_SGD = 70;

@@ -7,9 +7,13 @@ import type { CalendarResult } from "@/types";
 export function ResultsTable({
   results,
   currency,
+  selectedDate,
+  onSelectDate,
 }: {
   results: CalendarResult[];
   currency: string;
+  selectedDate?: string | null;
+  onSelectDate?: (date: string) => void;
 }) {
   // 订阅汇率以支持响应式更新
   useCurrencyStore((s) => s.rate);
@@ -48,19 +52,29 @@ export function ResultsTable({
               const isMin = r.price === min;
               const level = levelFromWindow(r.price, min, max);
               const dot = level ? LEVEL_META[level].dot : "bg-muted-foreground/40";
+              const isSelected = selectedDate === r.depart_date;
               return (
                 <tr
                   key={`${r.depart_date}-${r.return_date ?? ""}`}
+                  onClick={() => onSelectDate?.(r.depart_date)}
                   className={cn(
-                    "border-b border-border transition-colors last:border-0 hover:bg-muted/40",
+                    "border-b border-border transition-colors last:border-0 hover:bg-muted/40 cursor-pointer select-none relative",
                     isMin && "bg-good/5",
+                    isSelected && "bg-primary/5",
                   )}
                 >
-                  <td className="px-4 py-2.5 font-medium">{r.depart_date}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
+                  <td className="px-4 py-2.5 font-medium relative">
+                    {isSelected && (
+                      <div className="absolute left-0 top-0 bottom-0 w-1 bg-primary" />
+                    )}
+                    <span className={cn(isSelected && "text-primary font-bold")}>
+                      {r.depart_date}
+                    </span>
+                  </td>
+                  <td className={cn("px-4 py-2.5", isSelected ? "text-primary font-medium" : "text-muted-foreground")}>
                     {weekday(r.depart_date)}
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
+                  <td className={cn("px-4 py-2.5", isSelected ? "text-primary font-medium" : "text-muted-foreground")}>
                     {r.return_date ?? "—"}
                   </td>
                   <td className="px-4 py-2.5">
@@ -70,7 +84,7 @@ export function ResultsTable({
                         title={level ? LEVEL_META[level].zh : undefined}
                         aria-hidden
                       />
-                      <span className="tnum font-semibold">
+                      <span className={cn("tnum font-semibold", isSelected && "text-primary font-bold")}>
                         {fmtPrice(r.price, currency)}
                       </span>
                       {isMin && (
@@ -80,10 +94,10 @@ export function ResultsTable({
                       )}
                     </span>
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
+                  <td className={cn("px-4 py-2.5", isSelected ? "text-primary font-medium" : "text-muted-foreground")}>
                     {r.carrier ?? "—"}
                   </td>
-                  <td className="px-4 py-2.5 text-muted-foreground">
+                  <td className={cn("px-4 py-2.5", isSelected ? "text-primary font-medium" : "text-muted-foreground")}>
                     {r.stops == null ? "—" : stopsLabel(r.stops)}
                   </td>
                 </tr>

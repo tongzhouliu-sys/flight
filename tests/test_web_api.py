@@ -48,3 +48,30 @@ def test_routes(monkeypatch):
     assert resp.status_code == 200
     routes = resp.json()["routes"]
     assert routes[0]["id"] == "R3" and routes[0]["nearby_airports"] == ["SZX", "CAN"]
+
+
+def test_search_detail_ok(monkeypatch):
+    class FakeOption:
+        def __init__(self):
+            self.price = 500.0
+            self.currency = "SGD"
+            self.carrier = "SQ"
+            self.stops = 0
+            self.depart_time = None
+            self.arrive_time = None
+            self.layover_cities = []
+
+    class FakeChain:
+        def details(self, origin, dest, depart_date, return_date):
+            return [FakeOption()]
+
+    monkeypatch.setattr(web_api, "build_chain", lambda cabin, adults: FakeChain())
+    resp = client.post("/api/search/detail", json={
+        "origin": "SIN", "dest": "HKG", "depart_date": "2026-08-01",
+        "cabin": "ECONOMY", "adults": 1
+    })
+    assert resp.status_code == 200
+    opt = resp.json()["option"]
+    assert opt["alt_price"] == 500.0
+    assert opt["detail"]["carrier"] == "SQ"
+

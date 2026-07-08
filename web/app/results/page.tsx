@@ -1,9 +1,25 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Sparkles, SlidersHorizontal, ChevronDown, ChevronUp, X, Filter } from "lucide-react";
+import { ArrowLeft, Sparkles, SlidersHorizontal, ChevronDown, ChevronUp, X, Filter, Plane, AlertTriangle, Loader2 } from "lucide-react";
 import { OpportunityCard } from "@/components/opportunity-card";
+import { getAirport } from "@/lib/airports";
+import { generateItinerary } from "@/lib/visa-baggage";
+import type { Opportunity } from "@/types";
+
+function formatAirportWithLang(code: string, isEn: boolean): string {
+  const a = getAirport(code);
+  if (!a) return code;
+  if (isEn) {
+    return `${a.cityEn} Airport (${a.code})`;
+  } else {
+    if (a.name.startsWith(a.city)) {
+      return a.name;
+    }
+    return `${a.city}${a.name}`;
+  }
+}
 import { RouteLabel } from "@/components/route-label";
 import { PriceChart } from "@/components/price-chart";
 import { ResultsTable } from "@/components/results-table";
@@ -39,10 +55,102 @@ export default function ResultsPage() {
   // 订阅汇率以支持响应式更新
   useCurrencyStore((s) => s.rate);
 
+  // 汇率或优惠前税费过滤
+  const TAX_SGD = 70;
+  const TAX_CNY = 350;
+
+  const adjustPrice = useCallback((price: number, currency: string) => {
+    let tax = 0;
+    if (filters.excludeTax) {
+      tax += currency === "SGD" ? TAX_SGD : TAX_CNY;
+    }
+    if (filters.studentTicket) {
+      return (price - tax) * 0.95;
+    }
+    return price - tax;
+  }, [filters.excludeTax, filters.studentTicket]);
+
+  // 选中的日期与详情状态
+  const [selectedDate, setSelectedDate] = useState<string | null>(null);
+  const [selectedDateDetail, setSelectedDateDetail] = useState<Opportunity | null>(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+
   useEffect(() => {
     hydrate();
     useCurrencyStore.getState().fetchRate();
   }, [hydrate]);
+
+  // 默认选中最低价格 of the 日期
+  useEffect(() => {
+    if (!response) return;
+    const results = response.results;
+    if (!results || results.length === 0) return;
+    
+    const prices = results.map(r => adjustPrice(r.price, r.currency));
+    const minPrice = prices.length ? Math.min(...prices) : 0;
+    const cheapestRes = results.find(r => adjustPrice(r.price, r.currency) === minPrice);
+    const targetDate = cheapestRes ? cheapestRes.depart_date : results[0].depart_date;
+
+    if (selectedDate !== targetDate) {
+      Promise.resolve().then(() => {
+        setSelectedDate(targetDate);
+      });
+    }
+  }, [response, selectedDate, adjustPrice]);
+
+  // 监听选中日期变化，实时请求航班详情
+  useEffect(() => {
+    if (!selectedDate || !response) return;
+
+    let active = true;
+    Promise.resolve().then(() => {
+      if (active) {
+        setDetailLoading(true);
+        setDetailError(null);
+      }
+    });
+
+    const query = response.query;
+    const matchedRes = response.results.find((r) => r.depart_date === selectedDate);
+    const returnDate = query.trip_type === "round_trip" ? matchedRes?.return_date || query.return_date : null;
+
+    fetch("/api/search/detail", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        origin: query.origin,
+        dest: query.dest,
+        depart_date: selectedDate,
+        return_date: returnDate,
+        cabin: query.cabin,
+        adults: query.adults,
+      }),
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("获取详情失败");
+        return res.json();
+      })
+      .then((data) => {
+        if (active) {
+          setSelectedDateDetail(data.option);
+        }
+      })
+      .catch((err) => {
+        if (active) {
+          setDetailError(err.message || "加载失败");
+        }
+      })
+      .finally(() => {
+        if (active) {
+          setDetailLoading(false);
+        }
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [selectedDate, response]);
 
   if (status === "loading") return <Loading label="正在实时搜索航班与省钱机会…" />;
 
@@ -77,20 +185,7 @@ export default function ResultsPage() {
     new Set(opportunities.flatMap((op) => op.layover_cities || []))
   ).map((c) => c.toUpperCase());
 
-  // 汇率或优惠前税费过滤
-  const TAX_SGD = 70;
-  const TAX_CNY = 350;
-
-  const adjustPrice = (price: number, currency: string) => {
-    let tax = 0;
-    if (filters.excludeTax) {
-      tax += currency === "SGD" ? TAX_SGD : TAX_CNY;
-    }
-    if (filters.studentTicket) {
-      return (price - tax) * 0.95;
-    }
-    return price - tax;
-  };
+  // adjustPrice defined at the top of the component
 
   // 筛选 opportunities
   const filteredOpportunities = opportunities.filter((op) => {
@@ -671,6 +766,149 @@ export default function ResultsPage() {
             </CardContent>
           </Card>
 
+          {/* 航班详情（所选日期） */}
+          <section className="flex flex-col gap-2">
+            <SectionTitle icon={<Plane className="h-4 w-4 text-primary" />}>
+              所选日期航班详情 ({selectedDate})
+            </SectionTitle>
+            
+            {detailLoading ? (
+              <Card className="border border-border/85 shadow-sm">
+                <CardContent className="p-8 flex flex-col items-center justify-center gap-3 text-muted-foreground">
+                  <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                  <p className="text-xs">正在实时加载航班航程信息...</p>
+                </CardContent>
+              </Card>
+            ) : detailError ? (
+              <Card className="border border-border/85 shadow-sm">
+                <CardContent className="p-8 flex flex-col items-center justify-center gap-3 text-center">
+                  <AlertTriangle className="h-6 w-6 text-warn" />
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">获取航班详情失败</p>
+                    <p className="text-xs text-muted-foreground mt-1">{detailError}</p>
+                  </div>
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    onClick={() => {
+                      const d = selectedDate;
+                      setSelectedDate(null);
+                      setTimeout(() => setSelectedDate(d), 50);
+                    }}
+                    className="mt-2 text-xs cursor-pointer"
+                  >
+                    重试
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : selectedDateDetail ? (
+              <Card className="border border-border/85 shadow-sm flex flex-col overflow-hidden">
+                <CardContent className="p-4 flex flex-col gap-4">
+                  {/* Header info */}
+                  <div className="flex items-center justify-between pb-2 border-b border-border/40 text-xs text-muted-foreground font-semibold">
+                    <span>
+                      {selectedDateDetail.return_date ? "往返行程" : "单程行程"}
+                    </span>
+                    <span className="text-primary font-bold text-sm">
+                      {fmtPrice(selectedDateDetail.alt_price, cur)}
+                    </span>
+                  </div>
+
+                  {/* Timeline */}
+                  <div className="flex flex-col gap-4 max-h-[360px] overflow-y-auto pr-1">
+                    {generateItinerary(selectedDateDetail, false).map((item, idx) => {
+                      if (item.type === "flight") {
+                        return (
+                          <div key={idx} className="flex gap-3 text-xs">
+                            {/* Times */}
+                            <div className="w-14 shrink-0 text-right flex flex-col justify-between py-0.5">
+                              <div>
+                                <div className="font-bold text-foreground text-sm">{item.departTime}</div>
+                                <div className="text-[9px] text-muted-foreground font-medium">{item.departDate}</div>
+                              </div>
+                              <div className="my-2 text-[9px] text-muted-foreground/60 font-semibold">{item.duration}</div>
+                              <div>
+                                <div className="font-bold text-foreground text-sm">{item.arriveTime}</div>
+                                <div className="text-[9px] text-muted-foreground font-medium">{item.arriveDate}</div>
+                              </div>
+                            </div>
+
+                            {/* Track line */}
+                            <div className="flex flex-col items-center py-1 shrink-0">
+                              <div className="h-2.5 w-2.5 rounded-full border border-primary bg-card z-10 shrink-0 flex items-center justify-center">
+                                <div className="h-1 w-1 rounded-full bg-primary" />
+                              </div>
+                              <div className="w-0.5 border-l border-dashed border-border/70 flex-1 my-1 min-h-[40px]" />
+                              <div className="h-2.5 w-2.5 rounded-full border border-info bg-card z-10 shrink-0 flex items-center justify-center">
+                                <div className="h-1 w-1 rounded-full bg-info" />
+                              </div>
+                            </div>
+
+                            {/* Details */}
+                            <div className="flex-1 flex flex-col justify-between min-w-0">
+                              <div className="truncate font-semibold text-foreground text-sm flex items-center gap-1">
+                                <span className="font-extrabold text-primary text-base">{item.origin}</span>
+                                <span className="text-[10px] text-muted-foreground font-medium truncate">
+                                  {formatAirportWithLang(item.origin || "", false)}
+                                </span>
+                              </div>
+                              <div className="my-2 p-2.5 rounded-lg border border-border/50 bg-muted/20 text-[10px] text-muted-foreground flex flex-col gap-1">
+                                <div className="flex justify-between font-semibold">
+                                  <span>{item.carrier} <b className="text-primary font-bold">{item.flightNumber}</b></span>
+                                  <span>{item.cabin}</span>
+                                </div>
+                                <div className="flex justify-between text-[9px] text-muted-foreground/80">
+                                  <span>{item.aircraft || "波音 777"}</span>
+                                  <span className="text-good font-semibold">{item.meals}</span>
+                                </div>
+                              </div>
+                              <div className="truncate font-semibold text-foreground text-sm flex items-center gap-1">
+                                <span className="font-extrabold text-info text-base">{item.dest}</span>
+                                <span className="text-[10px] text-muted-foreground font-medium truncate">
+                                  {formatAirportWithLang(item.dest || "", false)}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      } else if (item.type === "layover") {
+                        return (
+                          <div key={idx} className="flex gap-3 my-1 text-xs">
+                            <div className="w-14 shrink-0" />
+                            <div className="flex flex-col items-center shrink-0">
+                              <div className="w-0.5 border-l border-dashed border-border/70 flex-1 min-h-[24px]" />
+                            </div>
+                            <div className="flex-1 bg-muted/30 border border-border/40 rounded-lg p-2 text-[10px]">
+                              <span className="font-semibold text-foreground">
+                                中转 {item.city} · {item.layoverDuration}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  {/* Action Link */}
+                  <div className="pt-2 border-t border-border/40 flex justify-end">
+                    <a href={selectedDateDetail.deeplink} target="_blank" rel="noopener noreferrer">
+                      <Button size="sm" className="h-8 text-xs gap-1 cursor-pointer">
+                        去 Google Flights
+                      </Button>
+                    </a>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border border-border/85 shadow-sm">
+                <CardContent className="p-6 text-center text-xs text-muted-foreground">
+                  所选日期暂无直飞/联程航班详情。
+                </CardContent>
+              </Card>
+            )}
+          </section>
+
           {/* 省钱机会 */}
           <section className="flex flex-col gap-2">
             <SectionTitle icon={<Sparkles className="h-4 w-4" />}>
@@ -703,8 +941,13 @@ export default function ResultsPage() {
               <SectionTitle>价格趋势</SectionTitle>
               <Card className="shadow-sm">
                 <CardContent className="p-3">
-                  <div className="h-40 md:h-44 relative">
-                    <PriceChart results={displayResults} currency={cur} />
+                  <div className="h-60 md:h-64 relative">
+                    <PriceChart 
+                      results={displayResults} 
+                      currency={cur} 
+                      selectedDate={selectedDate}
+                      onSelectDate={setSelectedDate}
+                    />
                   </div>
                 </CardContent>
               </Card>
@@ -715,7 +958,12 @@ export default function ResultsPage() {
           <section className="flex flex-col gap-2">
             <SectionTitle>全部日期价格（{displayResults.length}）</SectionTitle>
             <div>
-              <ResultsTable results={displayResults} currency={cur} />
+              <ResultsTable 
+                results={displayResults} 
+                currency={cur} 
+                selectedDate={selectedDate}
+                onSelectDate={setSelectedDate}
+              />
             </div>
           </section>
         </div>
