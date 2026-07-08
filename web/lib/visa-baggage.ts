@@ -1,3 +1,4 @@
+import type { Opportunity } from "../types";
 import { getAirport } from "./airports";
 
 export interface FaqItem {
@@ -314,9 +315,7 @@ export function getFaqAndRemarks(
   dest: string,
   layoverCities: string[],
   freeCheckedBag: boolean,
-  bagRecheck: boolean,
-  departTimeStr: string | null,
-  arriveTimeStr: string | null
+  bagRecheck: boolean
 ): FaqItem[] {
   const faqs: FaqItem[] = [];
 
@@ -397,7 +396,7 @@ export function formatDuration(departStr: string | null, arriveStr: string | nul
       return `${mins}分钟`;
     }
     return `${hours}小时${mins}分钟`;
-  } catch (e) {
+  } catch {
     return "—";
   }
 }
@@ -416,7 +415,7 @@ export function formatDateTime(isoStr: string | null): string {
     const hh = String(date.getHours()).padStart(2, "0");
     const mm = String(date.getMinutes()).padStart(2, "0");
     return `${y}-${m}-${d} ${hh}:${mm}`;
-  } catch (e) {
+  } catch {
     return isoStr;
   }
 }
@@ -431,7 +430,7 @@ export function formatTimeOnly(isoStr: string | null): string {
     const mm = String(date.getMinutes()).padStart(2, "0");
     if (hh === "00" && mm === "00") return "整天";
     return `${hh}:${mm}`;
-  } catch (e) {
+  } catch {
     return "—";
   }
 }
@@ -679,7 +678,6 @@ function formatDateAndWeekday(isoStr: string, isEn: boolean): { dateLabel: strin
   const d = dateObj.getDate();
   const w = dateObj.getDay();
 
-  const monthsZh = ["10月", "11月", "12月", "1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月"]; // Wait, month index: 0 is Jan
   const realMonthsZh = ["1月", "2月", "3月", "4月", "5月", "6月", "7月", "8月", "9月", "10月", "11月", "12月"];
   const monthsEn = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   const weekdaysZh = ["周日", "周一", "周二", "周三", "周四", "周五", "周六"];
@@ -698,7 +696,7 @@ function formatDateAndWeekday(isoStr: string, isEn: boolean): { dateLabel: strin
   }
 }
 
-export function generateItinerary(op: any, isEn: boolean): DetailedSegment[] {
+export function generateItinerary(op: Opportunity, isEn: boolean): DetailedSegment[] {
   const d = op.detail || {};
   const origin = op.origin;
   const dest = op.dest;

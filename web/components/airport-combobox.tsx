@@ -35,10 +35,13 @@ export function AirportCombobox({
   const containerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const [prevValue, setPrevValue] = useState(value);
+
   // 当外部 value 变化（如从历史填充）时同步输入框
-  useEffect(() => {
+  if (value !== prevValue) {
     setInput(value);
-  }, [value]);
+    setPrevValue(value);
+  }
 
   const doSearch = useCallback((q: string) => {
     const hits = searchAirports(q);

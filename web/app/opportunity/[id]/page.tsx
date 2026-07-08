@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Plane, Utensils, Share2, Compass, CheckCircle2, AlertTriangle, HelpCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, Plane, Utensils, Share2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { EmptyState, Loading } from "@/components/states";
 import { ExplainBlock } from "@/components/explain-block";
 import { Money } from "@/components/money";
@@ -16,12 +16,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tooltip } from "@/components/ui/tooltip";
 import { RISK_TAG_LABELS, RISK_TAG_TERMS, TYPE_TONE, oppMeta } from "@/lib/constants";
-import { fmtPrice, stopsLabel, weekday } from "@/lib/format";
-import { formatAirport, airportCity, getAirport } from "@/lib/airports";
+import { fmtPrice, weekday } from "@/lib/format";
+import { getAirport } from "@/lib/airports";
 import { levelForOpportunity, readPercentile } from "@/lib/price-level";
 import { useSearchStore } from "@/store/search";
 import { useCurrencyStore } from "@/lib/currency";
-import { getFaqAndRemarks, formatDuration, formatDateTime, formatTimeOnly, generateItinerary } from "@/lib/visa-baggage";
+import { getFaqAndRemarks, formatDuration, generateItinerary } from "@/lib/visa-baggage";
 
 const TERMINALS: Record<string, string> = {
   LAX: "TB", MNL: "T1", XMN: "T3", SIN: "T3", PVG: "T2", PEK: "T3", SZX: "T3", CAN: "T2",
@@ -94,6 +94,9 @@ export default function OpportunityDetailPage() {
   const response = useSearchStore((s) => s.response);
   const hydrate = useSearchStore((s) => s.hydrate);
 
+  const [lang, setLang] = useState<"zh" | "en">("zh");
+  const [copied, setCopied] = useState(false);
+
   // 订阅汇率
   useCurrencyStore((s) => s.rate);
 
@@ -119,9 +122,6 @@ export default function OpportunityDetailPage() {
   const d = op.detail as OppDetail;
   const cur = op.currency;
 
-  const [lang, setLang] = useState<"zh" | "en">("zh");
-  const [copied, setCopied] = useState(false);
-
   const handleShare = () => {
     try {
       const summaryText = lang === "zh"
@@ -140,9 +140,7 @@ export default function OpportunityDetailPage() {
     op.dest,
     op.layover_cities || [],
     op.free_checked_bag,
-    op.bag_recheck,
-    d.depart_time ?? null,
-    d.arrive_time ?? null
+    op.bag_recheck
   );
   const meta = oppMeta(op.type, op.type_label);
   const level = levelForOpportunity(readPercentile(op.detail), op.base_price, op.alt_price);
